@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "tgrag-bot"
+version = "0.1.0"
+description = "Telegram RAG Bot Starter"
+authors = ["La5er <la5er@example.com>"]
+readme = "README.md"
+packages = [{include = "tgrag_bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+aiogram = "3.*"
+pydantic-settings = "^2.5.0"
+python-multipart = "^0.0.17"
+httpx = "^0.27.0"
+loguru = "^0.7.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.0"
+pytest = "^8.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry-core"
