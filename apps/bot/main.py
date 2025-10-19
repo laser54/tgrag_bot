@@ -1,6 +1,8 @@
 """Main FastAPI application with aiogram integration."""
 
+import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,6 +14,7 @@ from loguru import logger
 
 from .routes.health import router as health_router
 from .settings import settings
+from .tg import handlers
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,22 +30,78 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Telegram RAG Bot...")
 
     # Initialize bot and dispatcher for later use
-    bot = Bot(token=settings.telegram_bot_token)
-    dp = Dispatcher()
+    try:
+        bot = Bot(token=settings.telegram_bot_token)
+        dp = Dispatcher()
 
-    # Store in app state for later access
-    app.state.bot = bot
-    app.state.dp = dp
+        # Store in app state for later access
+        app.state.bot = bot
+        app.state.dp = dp
 
-    logger.info(f"Bot configured for token: {settings.telegram_bot_token[:10]}...")
-    if settings.allowed_user_ids:
-        logger.info(f"Restricted to users: {settings.allowed_user_ids_list}")
+        logger.info(f"Bot configured for token: {settings.telegram_bot_token[:10]}...")
+        if settings.allowed_user_ids:
+            logger.info(f"Restricted to users: {settings.allowed_user_ids_list}")
+    except Exception as e:
+        logger.warning(f"Bot initialization failed: {e}")
+        logger.warning("Running in demo mode without Telegram bot functionality")
+        app.state.bot = None
+        app.state.dp = None
+
+    # Setup webhook if URL is provided (by cloudflared tunnel)
+    # In Docker mode, we run in polling mode for simplicity
+    if app.state.bot and settings.webhook_url and not os.getenv("DOCKER_CONTAINER"):
+        logger.info(f"Setting up webhook: {settings.webhook_url}")
+        try:
+            await app.state.bot.set_webhook(
+                url=settings.webhook_url, drop_pending_updates=True
+            )
+            logger.info("✅ Webhook configured successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to set webhook: {e}")
+            # Don't exit - webhook can be set manually later
+    elif app.state.bot:
+        logger.info("Running in polling mode (Docker or no webhook URL)")
+    else:
+        logger.info("Demo mode - no Telegram bot functionality")
+
+    # Register handlers if bot is available
+    if app.state.dp:
+        app.state.dp.include_router(handlers.router)
+        logger.info("✅ Telegram handlers registered")
+    else:
+        logger.info("Demo mode - handlers not registered")
+
+    # Start polling in Docker mode
+    if os.getenv("DOCKER_CONTAINER") and app.state.bot and app.state.dp:
+        logger.info("🚀 Starting bot polling...")
+        polling_task = asyncio.create_task(app.state.dp.start_polling(app.state.bot))
+    else:
+        polling_task = None
 
     yield
 
+    # Stop polling if running
+    if polling_task:
+        logger.info("🛑 Stopping bot polling...")
+        polling_task.cancel()
+        try:
+            await polling_task
+        except asyncio.CancelledError:
+            pass
+
     # Shutdown
     logger.info("Shutting down bot...")
-    await bot.session.close()
+
+    # Remove webhook if it was set
+    if app.state.bot and settings.webhook_url:
+        try:
+            await app.state.bot.delete_webhook()
+            logger.info("✅ Webhook removed")
+        except Exception as e:
+            logger.warning(f"Failed to remove webhook: {e}")
+
+    if app.state.bot:
+        await app.state.bot.session.close()
 
 
 # Create FastAPI app
@@ -64,6 +123,32 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health_router)
+
+
+@app.post("/webhook/telegram")
+async def telegram_webhook(request: Request):
+    """Handle Telegram webhook updates."""
+    if not app.state.bot or not app.state.dp:
+        return {"status": "error", "message": "Bot not initialized (demo mode)"}
+
+    try:
+        # Get update data
+        update_data = await request.json()
+
+        # Process update with aiogram
+        from aiogram.types import Update
+
+        update = Update(**update_data)
+
+        # Handle the update
+        await app.state.dp.feed_update(bot=app.state.bot, update=update)
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
 
 # Mount static files for webapp
 webapp_path = Path(__file__).parent.parent.parent / "webapp"

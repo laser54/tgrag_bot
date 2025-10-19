@@ -71,13 +71,13 @@ tgrag-bot/
 - [ ] **TEST:** Webhook endpoint accepts requests, handlers work
 - [ ] **COMMIT:** `feat(bot): telegram bot with webhook handlers`
 
-#### T3.2 - Local Development with ngrok (45 min)
-- [ ] Add pyngrok for automatic HTTPS tunneling
-- [ ] Create automatic ngrok startup and webhook URL configuration
+#### T3.2 - Local Development with cloudflared (45 min)
+- [ ] Add cloudflared Docker container to docker-compose
+- [ ] Create automatic cloudflared startup and webhook URL configuration
 - [ ] Add webhook setup/cleanup in FastAPI lifespan
-- [ ] Configure bot to use ngrok HTTPS URL
-- [ ] **TEST:** Bot receives messages via ngrok webhook locally
-- [ ] **COMMIT:** `feat(dev): ngrok integration for local webhook development`
+- [ ] Configure bot to use cloudflared HTTPS URL
+- [ ] **TEST:** Bot receives messages via cloudflared webhook locally
+- [ ] **COMMIT:** `feat(dev): cloudflared docker integration for local webhook development`
 
 #### T3.3 - VPS Ubuntu Deployment (30 min)
 - [ ] Create deploy/ubuntu-setup.sh script (2-3 commands)
@@ -109,7 +109,7 @@ tgrag-bot/
 - [ ] **COMMIT:** `docs: quickstart, troubleshooting, roadmap`
 
 ## Definition of Done
-- [ ] **Local webhook development:** Bot receives messages via ngrok HTTPS tunnel
+- [ ] **Local webhook development:** Bot receives messages via cloudflared HTTPS tunnel
 - [ ] **VPS deployment:** Clean Ubuntu + domain → 2-3 commands → production bot
 - [ ] **Webhook endpoint:** POST /webhook/telegram processes Telegram updates
 - [ ] **Bot commands:** /start welcome, /menu shows WebApp button
@@ -121,11 +121,11 @@ tgrag-bot/
 - ✅ After T1: pre-commit hooks work, basic linting passes
 - ✅ After T2: health endpoint responds correctly
 - 🚧 After T3.1: webhook endpoint accepts requests, bot handlers work
-- ⏳ After T3.2: bot receives messages via ngrok webhook locally
+- ⏳ After T3.2: bot receives messages via cloudflared webhook locally
 - ⏳ After T3.3: clean Ubuntu VPS deployment with domain works
 - ⏳ After T4: Mini App loads and shows health status
 - ⏳ After T5: Docker containers start successfully
-- ⏳ After T6: All deployment scenarios work (local ngrok + VPS)
+- ⏳ After T6: All deployment scenarios work (local cloudflared + VPS)
 
 ## Commands Reference
 ```bash
@@ -135,9 +135,9 @@ pip install -r requirements.txt  # fallback if poetry fails
 
 # Development & Production commands:
 
-# 1. Local development with ngrok (automatic HTTPS)
+# 1. Local development with cloudflared (automatic HTTPS)
 export TELEGRAM_BOT_TOKEN=your_token
-python run.py  # automatically starts ngrok and configures webhooks
+python run.py  # automatically starts cloudflared and configures webhooks
 
 # 2. Production on VPS with domain
 # Deploy to clean Ubuntu server with domain attached:
@@ -145,9 +145,9 @@ bash deploy/ubuntu-setup.sh yourdomain.com
 # That's it! Bot will be running with HTTPS
 
 # 3. Manual webhook setup (for custom tunnels)
-ngrok http 8080  # get https://abc123.ngrok.io
+cloudflared tunnel --url http://localhost:8080  # get https://abc123.trycloudflare.com
 export TELEGRAM_BOT_TOKEN=your_token
-export WEBHOOK_URL=https://abc123.ngrok.io/webhook/telegram
+export WEBHOOK_URL=https://abc123.trycloudflare.com/webhook/telegram
 python run.py
 
 # Docker

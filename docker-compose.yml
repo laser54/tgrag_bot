@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Cloudflared tunnel for HTTPS webhook
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://bot:8080
+    networks:
+      - tgrag-network
+    depends_on:
+      - bot
+    restart: unless-stopped
+
+  # Main FastAPI application
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - tgrag-network
+    restart: unless-stopped
+
+  # Qdrant vector database
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - tgrag-network
+    restart: unless-stopped
+
+  # Ollama for local LLM (optional)
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   networks:
+  #     - tgrag-network
+  #   restart: unless-stopped
+
+networks:
+  tgrag-network:
+    driver: bridge
+
+volumes:
+  qdrant_data:
+  ollama_data:

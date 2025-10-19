@@ -5,6 +5,7 @@ description = "Telegram RAG Bot Starter"
 authors = ["La5er <la5er@example.com>"]
 readme = "README.md"
 packages = [{include = "tgrag_bot"}]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"

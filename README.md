@@ -67,7 +67,22 @@ curl http://localhost:8080/health
 # Should return: {"status":"ok"}
 ```
 
-### 🏠 Local Development (Webhooks + ngrok)
+### 🐳 Quick Docker Start (Current)
+
+```bash
+# Clone repository
+git clone https://github.com/your-username/tgrag-bot.git
+cd tgrag-bot
+
+# Configure environment
+cp .env.example .env
+# Add your TELEGRAM_BOT_TOKEN to .env
+
+# Run with Docker Compose
+docker compose up --build
+```
+
+### 🏠 Local Development (Webhooks + cloudflared)
 
 #### 1. Get Telegram Bot Token
 1. Go to [@BotFather](https://t.me/botfather) on Telegram
@@ -88,31 +103,38 @@ cp .env.example .env
 # Edit .env and add: TELEGRAM_BOT_TOKEN=your_token_here
 ```
 
-#### 3. Run with Automatic ngrok
+#### 3. Run with Automatic cloudflared
 ```bash
 python run.py
 ```
 
 **What happens automatically:**
-- ngrok tunnel starts on port 8080
-- Creates HTTPS URL like `https://abc123.ngrok.io`
-- Registers webhook: `https://abc123.ngrok.io/webhook/telegram`
+- cloudflared tunnel starts on port 8080
+- Creates temporary HTTPS domain like `https://abc123.trycloudflare.com`
+- Registers webhook: `https://abc123.trycloudflare.com/webhook/telegram`
 - Bot becomes available for testing
 
 **Check the logs** for your webhook URL and test the bot!
 
-#### 4. Manual ngrok Setup (Alternative)
+#### 4. Manual cloudflared Setup (Alternative)
 ```bash
-# Terminal 1: Start ngrok
-ngrok http 8080
-# Copy the HTTPS URL: https://abc123.ngrok.io
+# Terminal 1: Start cloudflared tunnel
+./bin/cloudflared.exe tunnel --url http://localhost:8080
+# Copy the HTTPS URL: https://abc123.trycloudflare.com
 
 # Terminal 2: Set webhook URL and run
-export WEBHOOK_URL=https://abc123.ngrok.io/webhook/telegram
+export WEBHOOK_URL=https://abc123.trycloudflare.com/webhook/telegram
 python run.py
 ```
 
-#### 5. API Documentation
+#### 5. Docker Development (Alternative)
+```bash
+# Build and run with Docker Compose
+docker compose up --build
+```
+**Note:** Docker version runs in polling mode without webhooks for simplicity.
+
+#### 6. API Documentation
 When running, API docs available at: `http://localhost:8080/docs`
 
 
@@ -187,7 +209,7 @@ tgrag-bot/
 ### Phase 2: Telegram Bot & Webhooks 🚧 IN PROGRESS
 - [ ] **Webhook endpoint** - POST /webhook/telegram with aiogram integration
 - [ ] **Bot commands** - /start and /menu handlers with WebApp buttons
-- [ ] **Local development** - ngrok tunneling for webhook testing
+- [ ] **Local development** - cloudflared tunneling for webhook testing
 - [ ] **Ubuntu deployment** - automated server setup with HTTPS
 
 ### Phase 3: RAG Implementation 📋

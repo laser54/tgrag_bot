@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     allowed_user_ids: str | None = Field(None, env="ALLOWED_USER_IDS")
     port: int = Field(8080, env="PORT")
     webapp_url: str = Field("http://localhost:8080/webapp/", env="WEBAPP_URL")
+    webhook_url: str | None = Field(None, env="WEBHOOK_URL")
 
     class Config:
         """Pydantic configuration."""
