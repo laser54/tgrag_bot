@@ -67,25 +67,53 @@ curl http://localhost:8080/health
 # Should return: {"status":"ok"}
 ```
 
-### 🚧 Local Development (Current)
+### 🏠 Local Development (Webhooks + ngrok)
 
+#### 1. Get Telegram Bot Token
+1. Go to [@BotFather](https://t.me/botfather) on Telegram
+2. Send `/newbot` and follow instructions
+3. Copy the bot token (format: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+
+#### 2. Setup Local Environment
 ```bash
-# 1. Setup environment
+# Setup environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 2. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 3. Configure environment
+# Configure environment
 cp .env.example .env
-# Add your TELEGRAM_BOT_TOKEN
-
-# 4. Run FastAPI server (ready for webhooks)
-python run.py
-
-# 5. API available at: http://localhost:8080/docs
+# Edit .env and add: TELEGRAM_BOT_TOKEN=your_token_here
 ```
+
+#### 3. Run with Automatic ngrok
+```bash
+python run.py
+```
+
+**What happens automatically:**
+- ngrok tunnel starts on port 8080
+- Creates HTTPS URL like `https://abc123.ngrok.io`
+- Registers webhook: `https://abc123.ngrok.io/webhook/telegram`
+- Bot becomes available for testing
+
+**Check the logs** for your webhook URL and test the bot!
+
+#### 4. Manual ngrok Setup (Alternative)
+```bash
+# Terminal 1: Start ngrok
+ngrok http 8080
+# Copy the HTTPS URL: https://abc123.ngrok.io
+
+# Terminal 2: Set webhook URL and run
+export WEBHOOK_URL=https://abc123.ngrok.io/webhook/telegram
+python run.py
+```
+
+#### 5. API Documentation
+When running, API docs available at: `http://localhost:8080/docs`
 
 
 ## 🏗️ Architecture

@@ -58,39 +58,35 @@ tgrag-bot/
 - [x] **COMMIT:** `feat(api): FastAPI app with /health and static webapp`
 
 ### T3 - Telegram Bot with Webhooks (120-150 min)
-**Goal:** Bot works via webhooks, runs locally, deploys to Ubuntu with 2-3 commands
+**Goal:** Bot works via webhooks locally (ngrok) & on VPS (domain), HTTPS-only
 
-#### T3.1 - Webhook Infrastructure (30 min)
+#### T3.1 - Webhook Endpoint & Bot Handlers (45 min)
 - [ ] Add webhook endpoint to FastAPI: POST /webhook/telegram
-- [ ] Configure aiogram for webhook mode (not polling)
-- [ ] Add webhook URL configuration (WEBHOOK_URL)
-- [ ] **TEST:** Webhook endpoint accepts requests
-- [ ] **COMMIT:** `feat(webhook): basic webhook endpoint infrastructure`
-
-#### T3.2 - Bot Handlers (30 min)
 - [ ] Create tg/handlers.py: /start and /menu handlers
 - [ ] /start: short welcome + repo link
 - [ ] /menu: WebApp keyboard with WebAppInfo(url=WEBAPP_URL)
 - [ ] Respect ALLOWED_USER_IDS (optional filtering)
+- [ ] Configure aiogram for webhook mode only
 - [ ] Add logging for commands/errors
-- [ ] **TEST:** Handlers process commands correctly
-- [ ] **COMMIT:** `feat(bot): telegram bot handlers for /start and /menu`
+- [ ] **TEST:** Webhook endpoint accepts requests, handlers work
+- [ ] **COMMIT:** `feat(bot): telegram bot with webhook handlers`
 
-#### T3.3 - Local Development with Tunneling (30 min)
-- [ ] Add ngrok/pyngrok for local webhook tunneling
-- [ ] Create dev script to setup webhook URL automatically
-- [ ] Add webhook setup/cleanup in lifespan
-- [ ] **TEST:** Bot receives messages via webhook in local dev
-- [ ] **COMMIT:** `feat(dev): ngrok tunneling for local webhook development`
+#### T3.2 - Local Development with ngrok (45 min)
+- [ ] Add pyngrok for automatic HTTPS tunneling
+- [ ] Create automatic ngrok startup and webhook URL configuration
+- [ ] Add webhook setup/cleanup in FastAPI lifespan
+- [ ] Configure bot to use ngrok HTTPS URL
+- [ ] **TEST:** Bot receives messages via ngrok webhook locally
+- [ ] **COMMIT:** `feat(dev): ngrok integration for local webhook development`
 
-#### T3.4 - Ubuntu Server Deployment (30-60 min)
-- [ ] Create deploy/ubuntu-setup.sh script
-- [ ] Install Python, pip, git, nginx, certbot
+#### T3.3 - VPS Ubuntu Deployment (30 min)
+- [ ] Create deploy/ubuntu-setup.sh script (2-3 commands)
+- [ ] Install Python, pip, git, nginx, certbot on clean Ubuntu
 - [ ] Setup systemd service for auto-start
-- [ ] Configure HTTPS with Let's Encrypt
-- [ ] Add production webhook URL setting
-- [ ] **TEST:** Deploy to clean Ubuntu server with 2-3 commands
-- [ ] **COMMIT:** `feat(deploy): ubuntu server deployment script`
+- [ ] Configure HTTPS with Let's Encrypt (requires domain)
+- [ ] Add production webhook URL configuration
+- [ ] **TEST:** Deploy to clean Ubuntu VPS with domain attached
+- [ ] **COMMIT:** `feat(deploy): ubuntu vps deployment script`
 
 ### T4 - WebApp Stub (30-45 min)
 - [ ] Create webapp/index.html: minimal page with Telegram WebApp SDK
@@ -113,24 +109,23 @@ tgrag-bot/
 - [ ] **COMMIT:** `docs: quickstart, troubleshooting, roadmap`
 
 ## Definition of Done
-- [ ] **Local webhook development:** Bot receives messages via ngrok tunnel
-- [ ] **Ubuntu deployment:** Clean Ubuntu server → 2-3 commands → working bot
+- [ ] **Local webhook development:** Bot receives messages via ngrok HTTPS tunnel
+- [ ] **VPS deployment:** Clean Ubuntu + domain → 2-3 commands → production bot
 - [ ] **Webhook endpoint:** POST /webhook/telegram processes Telegram updates
 - [ ] **Bot commands:** /start welcome, /menu shows WebApp button
-- [ ] **Docker production:** docker compose up -d --build → fully working
-- [ ] **Health checks:** GET /health returns {"status":"ok"}
-- [ ] **Documentation:** README covers all deployment scenarios
+- [ ] **HTTPS everywhere:** All communication via secure HTTPS
+- [ ] **Docker production:** Full containerized deployment ready
+- [ ] **Health monitoring:** GET /health returns {"status":"ok"}
 
 ## Testing Strategy
 - ✅ After T1: pre-commit hooks work, basic linting passes
 - ✅ After T2: health endpoint responds correctly
-- 🚧 After T3.1: webhook endpoint accepts POST requests
-- ⏳ After T3.2: bot handlers process commands correctly
-- ⏳ After T3.3: ngrok tunnel established, bot receives messages locally
-- ⏳ After T3.4: Ubuntu deployment script works on clean server
+- 🚧 After T3.1: webhook endpoint accepts requests, bot handlers work
+- ⏳ After T3.2: bot receives messages via ngrok webhook locally
+- ⏳ After T3.3: clean Ubuntu VPS deployment with domain works
 - ⏳ After T4: Mini App loads and shows health status
 - ⏳ After T5: Docker containers start successfully
-- ⏳ After T6: Complete end-to-end verification (webhook + polling modes)
+- ⏳ After T6: All deployment scenarios work (local ngrok + VPS)
 
 ## Commands Reference
 ```bash
@@ -138,14 +133,21 @@ tgrag-bot/
 pre-commit install || true
 pip install -r requirements.txt  # fallback if poetry fails
 
-# Local run (webhook mode)
-export TELEGRAM_BOT_TOKEN=123:abc
-export WEBHOOK_URL=https://abc123.ngrok.io/webhook/telegram
-python run.py
+# Development & Production commands:
 
-# Local run (polling mode for testing)
-export TELEGRAM_BOT_TOKEN=123:abc
-export USE_WEBHOOKS=false
+# 1. Local development with ngrok (automatic HTTPS)
+export TELEGRAM_BOT_TOKEN=your_token
+python run.py  # automatically starts ngrok and configures webhooks
+
+# 2. Production on VPS with domain
+# Deploy to clean Ubuntu server with domain attached:
+bash deploy/ubuntu-setup.sh yourdomain.com
+# That's it! Bot will be running with HTTPS
+
+# 3. Manual webhook setup (for custom tunnels)
+ngrok http 8080  # get https://abc123.ngrok.io
+export TELEGRAM_BOT_TOKEN=your_token
+export WEBHOOK_URL=https://abc123.ngrok.io/webhook/telegram
 python run.py
 
 # Docker
@@ -154,10 +156,11 @@ curl http://localhost:8080/health
 ```
 
 ## Constraints & Guardrails
-- **Webhooks first:** Production uses webhooks, polling for local testing only
-- **HTTPS required:** Webhooks need HTTPS (ngrok for local, Let's Encrypt for production)
+- **Webhooks only:** No polling, only HTTPS webhooks for all deployments
+- **HTTPS everywhere:** All communication via secure HTTPS (ngrok/Let's Encrypt)
+- **Domain required:** Production needs domain for Let's Encrypt certificates
 - **Fail fast on env:** Exit with clear message if TELEGRAM_BOT_TOKEN missing
 - **No RAG yet:** Qdrant runs but unused
 - **Clean logs:** Structured INFO on start, WARN on missing config
 - **Security:** Don't log tokens, restrict /menu to private chats
-- **Ubuntu deployment:** 2-3 commands setup on clean Ubuntu server
+- **Simple deployment:** 2-3 commands setup on clean Ubuntu server
