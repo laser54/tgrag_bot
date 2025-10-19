@@ -37,7 +37,8 @@ pip install -r requirements.txt
 
 # Run locally
 export TELEGRAM_BOT_TOKEN=your_token
-uvicorn apps.bot.main:app --reload --port 8080
+python run.py
+# or: uvicorn apps.bot.main:app --reload --port 8080
 ```
 
 ## Project Structure

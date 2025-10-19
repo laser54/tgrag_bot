@@ -66,7 +66,7 @@ app.add_middleware(
 app.include_router(health_router)
 
 # Mount static files for webapp
-webapp_path = Path(__file__).parent.parent / "webapp"
+webapp_path = Path(__file__).parent.parent.parent / "webapp"
 if webapp_path.exists():
     app.mount("/webapp", StaticFiles(directory=str(webapp_path)), name="webapp")
     logger.info(f"Mounted webapp static files at: {webapp_path}")
