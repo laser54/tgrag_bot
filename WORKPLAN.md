@@ -54,15 +54,40 @@ tgrag-bot/
 - [ ] **TEST:** Run server locally, curl /health returns ok
 - [ ] **COMMIT:** `feat(api): FastAPI app with /health and static webapp`
 
-### T3 - Minimal Telegram Bot (60-90 min)
+### T3 - Telegram Bot with Webhooks (120-150 min)
+**Goal:** Bot works via webhooks, runs locally, deploys to Ubuntu with 2-3 commands
+
+#### T3.1 - Webhook Infrastructure (30 min)
+- [ ] Add webhook endpoint to FastAPI: POST /webhook/telegram
+- [ ] Configure aiogram for webhook mode (not polling)
+- [ ] Add webhook URL configuration (WEBHOOK_URL)
+- [ ] **TEST:** Webhook endpoint accepts requests
+- [ ] **COMMIT:** `feat(webhook): basic webhook endpoint infrastructure`
+
+#### T3.2 - Bot Handlers (30 min)
 - [ ] Create tg/handlers.py: /start and /menu handlers
 - [ ] /start: short welcome + repo link
 - [ ] /menu: WebApp keyboard with WebAppInfo(url=WEBAPP_URL)
-- [ ] Wire aiogram polling in FastAPI lifespan/background task
 - [ ] Respect ALLOWED_USER_IDS (optional filtering)
-- [ ] Add logging for startup/errors
-- [ ] **TEST:** Run with test token, verify /start and /menu responses
-- [ ] **COMMIT:** `feat(bot): minimal aiogram bot with /start and /menu`
+- [ ] Add logging for commands/errors
+- [ ] **TEST:** Handlers process commands correctly
+- [ ] **COMMIT:** `feat(bot): telegram bot handlers for /start and /menu`
+
+#### T3.3 - Local Development with Tunneling (30 min)
+- [ ] Add ngrok/pyngrok for local webhook tunneling
+- [ ] Create dev script to setup webhook URL automatically
+- [ ] Add webhook setup/cleanup in lifespan
+- [ ] **TEST:** Bot receives messages via webhook in local dev
+- [ ] **COMMIT:** `feat(dev): ngrok tunneling for local webhook development`
+
+#### T3.4 - Ubuntu Server Deployment (30-60 min)
+- [ ] Create deploy/ubuntu-setup.sh script
+- [ ] Install Python, pip, git, nginx, certbot
+- [ ] Setup systemd service for auto-start
+- [ ] Configure HTTPS with Let's Encrypt
+- [ ] Add production webhook URL setting
+- [ ] **TEST:** Deploy to clean Ubuntu server with 2-3 commands
+- [ ] **COMMIT:** `feat(deploy): ubuntu server deployment script`
 
 ### T4 - WebApp Stub (30-45 min)
 - [ ] Create webapp/index.html: minimal page with Telegram WebApp SDK
@@ -85,18 +110,24 @@ tgrag-bot/
 - [ ] **COMMIT:** `docs: quickstart, troubleshooting, roadmap`
 
 ## Definition of Done
-- [ ] Fresh clone → .env filled → docker compose up -d --build
-- [ ] GET /health returns {"status":"ok"}
-- [ ] Telegram bot answers /start and shows working WebApp button on /menu
-- [ ] README explains this flow
+- [ ] **Local webhook development:** Bot receives messages via ngrok tunnel
+- [ ] **Ubuntu deployment:** Clean Ubuntu server → 2-3 commands → working bot
+- [ ] **Webhook endpoint:** POST /webhook/telegram processes Telegram updates
+- [ ] **Bot commands:** /start welcome, /menu shows WebApp button
+- [ ] **Docker production:** docker compose up -d --build → fully working
+- [ ] **Health checks:** GET /health returns {"status":"ok"}
+- [ ] **Documentation:** README covers all deployment scenarios
 
 ## Testing Strategy
 - After T1: pre-commit hooks work, basic linting passes
 - After T2: health endpoint responds correctly
-- After T3: bot responds to commands, WebApp button appears
+- After T3.1: webhook endpoint accepts POST requests
+- After T3.2: bot handlers process commands correctly
+- After T3.3: ngrok tunnel established, bot receives messages locally
+- After T3.4: Ubuntu deployment script works on clean server
 - After T4: Mini App loads and shows health status
 - After T5: Docker containers start successfully
-- After T6: Complete end-to-end verification
+- After T6: Complete end-to-end verification (webhook + polling modes)
 
 ## Commands Reference
 ```bash
@@ -104,9 +135,15 @@ tgrag-bot/
 pre-commit install || true
 pip install -r requirements.txt  # fallback if poetry fails
 
-# Local run
+# Local run (webhook mode)
 export TELEGRAM_BOT_TOKEN=123:abc
-uvicorn apps.bot.main:app --reload --port 8080
+export WEBHOOK_URL=https://abc123.ngrok.io/webhook/telegram
+python run.py
+
+# Local run (polling mode for testing)
+export TELEGRAM_BOT_TOKEN=123:abc
+export USE_WEBHOOKS=false
+python run.py
 
 # Docker
 docker compose up -d --build
@@ -114,8 +151,10 @@ curl http://localhost:8080/health
 ```
 
 ## Constraints & Guardrails
-- No webhook today: use polling for simplicity
-- Fail fast on env: exit with clear message if TELEGRAM_BOT_TOKEN missing
-- No RAG yet: Qdrant runs but unused
-- Clean logs: structured INFO on start, WARN on missing config
-- Security: don't log tokens, restrict /menu to private chats
+- **Webhooks first:** Production uses webhooks, polling for local testing only
+- **HTTPS required:** Webhooks need HTTPS (ngrok for local, Let's Encrypt for production)
+- **Fail fast on env:** Exit with clear message if TELEGRAM_BOT_TOKEN missing
+- **No RAG yet:** Qdrant runs but unused
+- **Clean logs:** Structured INFO on start, WARN on missing config
+- **Security:** Don't log tokens, restrict /menu to private chats
+- **Ubuntu deployment:** 2-3 commands setup on clean Ubuntu server
