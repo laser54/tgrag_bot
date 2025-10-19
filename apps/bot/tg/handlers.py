@@ -17,52 +17,65 @@ logger = logging.getLogger(__name__)
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
     """Handle /start command."""
+    logger.info(f"/start from {message.from_user.id}")
+
     welcome_text = (
-        "🤖 Привет! Я Telegram RAG Bot\n\n"
-        "Я могу анализировать документы и отвечать на вопросы. "
-        "Загружайте файлы и задавайте вопросы!\n\n"
-        "Используйте /menu для доступа к функциям бота."
+        "🤖 Hello! I'm Telegram RAG Bot\n\n"
+        "I can analyze documents and answer questions. "
+        "Upload files and ask questions!\n\n"
+        "Use /menu to access bot features."
     )
 
     await message.reply(welcome_text)
+    logger.debug(f"Welcome sent to {message.from_user.id}")
 
 
 @router.message(Command("menu"))
 async def cmd_menu(message: Message) -> None:
     """Handle /menu command with WebApp button."""
+    logger.info(f"/menu from {message.from_user.id}")
+
     # Check if user is allowed (if restrictions are set)
     if (
         settings.allowed_user_ids
         and message.from_user.id not in settings.allowed_user_ids_list
     ):
-        await message.reply("❌ У вас нет доступа к этому боту.")
+        logger.warning(f"Access denied for user {message.from_user.id}")
+        await message.reply("❌ You don't have access to this bot.")
         return
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="📱 Открыть приложение", web_app={"url": settings.webapp_url}
+                    text="📱 Open Application",
+                    web_app={"url": settings.webapp_url_full},
                 )
             ]
         ]
     )
 
     menu_text = (
-        "🎛️ Меню бота\n\n"
-        "Нажмите кнопку ниже, чтобы открыть интерфейс для работы с документами:"
+        "🎛️ Bot Menu\n\n"
+        "Click the button below to open the interface for working with documents:"
     )
 
     await message.reply(menu_text, reply_markup=keyboard)
+    logger.debug(f"Menu sent to {message.from_user.id}")
 
 
 @router.message()
 async def handle_text(message: Message) -> None:
     """Handle regular text messages."""
+    logger.debug(
+        f"Text from {message.from_user.id}: '{message.text[:80] if message.text else ''}'"
+    )
+
     # For now, just acknowledge the message
     # Later this will be replaced with RAG logic
     await message.reply(
-        "📝 Сообщение получено!\n\n"
-        "Пока что я только принимаю сообщения. "
-        "Скоро здесь будет RAG-логика для анализа документов!"
+        "📝 Message received!\n\n"
+        "For now I only accept messages. "
+        "Soon there will be RAG logic for document analysis!"
     )
+    logger.debug(f"Ack sent to {message.from_user.id}")

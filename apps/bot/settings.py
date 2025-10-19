@@ -29,8 +29,8 @@ class Settings(BaseSettings):
                 "TELEGRAM_BOT_TOKEN is required. " "Get it from @BotFather on Telegram."
             )
         if not v.startswith(("123456:ABC-", "123456789:ABC-")):
-            logging.warning(
-                "TELEGRAM_BOT_TOKEN format looks unusual. " "Make sure it's correct."
+            logging.getLogger(__name__).debug(
+                "TELEGRAM_BOT_TOKEN format looks unusual; continuing."
             )
         return v.strip()
 
@@ -42,6 +42,21 @@ class Settings(BaseSettings):
         return [
             int(uid.strip()) for uid in self.allowed_user_ids.split(",") if uid.strip()
         ]
+
+    @property
+    def webapp_base_url(self) -> str:
+        """Get the base HTTPS URL for webapp based on webhook URL."""
+        if self.webhook_url and self.webhook_url.startswith("https://"):
+            # Extract base URL: https://domain/webhook/telegram -> https://domain
+            base_url = self.webhook_url.replace("/webhook/telegram", "")
+            return base_url
+        # Fallback for development
+        return "https://example.trycloudflare.com"
+
+    @property
+    def webapp_url_full(self) -> str:
+        """Get the full webapp URL with /webapp/ path."""
+        return f"{self.webapp_base_url}/webapp/"
 
 
 # Global settings instance

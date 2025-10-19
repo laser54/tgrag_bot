@@ -38,6 +38,9 @@ COPY apps/ ./apps/
 COPY bin/ ./bin/
 COPY run.py ./
 
+# Make scripts executable
+RUN chmod +x bin/get_webhook_url.py
+
 # Create necessary directories
 RUN mkdir -p data logs
 
@@ -56,4 +59,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENV DOCKER_CONTAINER=1
 
 # Run application
-CMD ["python", "run.py"]
+CMD ["sh", "-c", "if [ \"$USE_CLOUDFLARED\" = \"true\" ]; then python bin/get_webhook_url.py && python -m uvicorn apps.bot.main:app --host 0.0.0.0 --port 8080 --no-access-log --log-level warning; else python -m uvicorn apps.bot.main:app --host 0.0.0.0 --port 8080 --no-access-log --log-level warning; fi"]

@@ -89,50 +89,76 @@ docker compose up --build
 2. Send `/newbot` and follow instructions
 3. Copy the bot token (format: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
 
-#### 2. Setup Local Environment
+#### 2. Setup Environment
 ```bash
-# Setup environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
 # Configure environment
 cp .env.example .env
 # Edit .env and add: TELEGRAM_BOT_TOKEN=your_token_here
 ```
 
-#### 3. Run with Automatic cloudflared
+#### 3. Run with Docker Compose
 ```bash
 python run.py
 ```
 
 **What happens automatically:**
-- cloudflared tunnel starts on port 8080
-- Creates temporary HTTPS domain like `https://abc123.trycloudflare.com`
+- Docker Compose starts all services including cloudflared tunnel
+- cloudflared creates temporary HTTPS domain like `https://abc123.trycloudflare.com`
+- Bot automatically reads the tunnel URL from cloudflared logs
 - Registers webhook: `https://abc123.trycloudflare.com/webhook/telegram`
-- Bot becomes available for testing
+- Bot becomes available for testing via webhooks
 
-**Check the logs** for your webhook URL and test the bot!
+**Check the logs** with `docker compose logs bot` to see webhook setup confirmation!
 
-#### 4. Manual cloudflared Setup (Alternative)
+## 🔍 Diagnostics
+
+### Check Bot Status
 ```bash
-# Terminal 1: Start cloudflared tunnel
-./bin/cloudflared.exe tunnel --url http://localhost:8080
-# Copy the HTTPS URL: https://abc123.trycloudflare.com
+curl http://localhost:8080/status
+```
+Returns bot initialization status, webhook configuration, and bot info.
 
-# Terminal 2: Set webhook URL and run
-export WEBHOOK_URL=https://abc123.trycloudflare.com/webhook/telegram
-python run.py
+### Check Health
+```bash
+curl http://localhost:8080/health
+```
+Returns `{"status": "ok"}` if the service is running.
+
+### View Logs
+```bash
+# Bot logs
+docker compose logs bot
+
+# Cloudflared logs
+docker compose logs cloudflared
+
+# All logs
+docker compose logs
 ```
 
-#### 5. Docker Development (Alternative)
+### Common Issues
+
+#### 🤖 Bot Not Responding
+1. **Check token validity**: Look for `✅ Bot token is valid` in logs
+2. **Check webhook setup**: Look for `✅ Webhook configured successfully` in logs
+3. **Check webhook URL**: Visit `/status` endpoint to verify webhook URL
+4. **Check Telegram**: Send `/start` to bot and watch webhook logs for incoming requests
+
+#### 🌐 Webhook Issues
+- **URL mismatch**: Ensure webhook URL matches cloudflared tunnel URL
+- **Network issues**: Check cloudflared connection status
+- **Telegram API**: Webhook may take time to propagate (up to 1 minute)
+
+#### 📝 Debug Commands
 ```bash
-# Build and run with Docker Compose
-docker compose up --build
+# Test webhook endpoint directly
+curl -X POST http://localhost:8080/webhook/telegram \
+  -H "Content-Type: application/json" \
+  -d '{"update_id": 1, "message": {"message_id": 1, "text": "test"}}'
+
+# Check bot webhook info
+curl http://localhost:8080/status
 ```
-**Note:** Docker version runs in polling mode without webhooks for simplicity.
 
 #### 6. API Documentation
 When running, API docs available at: `http://localhost:8080/docs`

@@ -7,7 +7,7 @@ One-command deploy (Docker) of a Telegram bot with RAG memory. Users can drop fi
 
 **Stack:** Python 3.12, aiogram v3 + FastAPI, Qdrant (vector DB), Ollama optional.
 
-**Current Status:** ✅ T1 & T2 completed. 🚧 Starting T3: Webhook-based Telegram bot.
+**Current Status:** ✅ T1 & T2 completed. ✅ T3.1 & T3.2 completed. 🚧 Bot ready for production deployment.
 
 ## Project Structure
 ```
@@ -58,26 +58,26 @@ tgrag-bot/
 - [x] **COMMIT:** `feat(api): FastAPI app with /health and static webapp`
 
 ### T3 - Telegram Bot with Webhooks (120-150 min)
-**Goal:** Bot works via webhooks locally (ngrok) & on VPS (domain), HTTPS-only
+**Goal:** Bot works via webhooks locally (cloudflared) & on VPS (domain), HTTPS-only
 
 #### T3.1 - Webhook Endpoint & Bot Handlers (45 min)
-- [ ] Add webhook endpoint to FastAPI: POST /webhook/telegram
-- [ ] Create tg/handlers.py: /start and /menu handlers
-- [ ] /start: short welcome + repo link
-- [ ] /menu: WebApp keyboard with WebAppInfo(url=WEBAPP_URL)
-- [ ] Respect ALLOWED_USER_IDS (optional filtering)
-- [ ] Configure aiogram for webhook mode only
-- [ ] Add logging for commands/errors
-- [ ] **TEST:** Webhook endpoint accepts requests, handlers work
-- [ ] **COMMIT:** `feat(bot): telegram bot with webhook handlers`
+- [x] Add webhook endpoint to FastAPI: POST /webhook/telegram
+- [x] Create tg/handlers.py: /start and /menu handlers
+- [x] /start: short welcome
+- [x] /menu: WebApp keyboard with WebAppInfo(url=WEBAPP_URL)
+- [x] Respect ALLOWED_USER_IDS (optional filtering)
+- [x] Configure aiogram for webhook mode only
+- [x] Add logging for commands/errors
+- [x] **TEST:** Webhook endpoint accepts requests, handlers work
+- [x] **COMMIT:** `feat(bot): telegram bot with webhook handlers`
 
 #### T3.2 - Local Development with cloudflared (45 min)
-- [ ] Add cloudflared Docker container to docker-compose
-- [ ] Create automatic cloudflared startup and webhook URL configuration
-- [ ] Add webhook setup/cleanup in FastAPI lifespan
-- [ ] Configure bot to use cloudflared HTTPS URL
-- [ ] **TEST:** Bot receives messages via cloudflared webhook locally
-- [ ] **COMMIT:** `feat(dev): cloudflared docker integration for local webhook development`
+- [x] Add cloudflared Docker container to docker-compose
+- [x] Create automatic cloudflared startup and webhook URL configuration
+- [x] Add webhook setup/cleanup in FastAPI lifespan
+- [x] Configure bot to use cloudflared HTTPS URL
+- [x] **TEST:** Bot receives messages via cloudflared webhook locally
+- [x] **COMMIT:** `feat(dev): cloudflared docker integration for local webhook development`
 
 #### T3.3 - VPS Ubuntu Deployment (30 min)
 - [ ] Create deploy/ubuntu-setup.sh script (2-3 commands)
@@ -156,8 +156,8 @@ curl http://localhost:8080/health
 ```
 
 ## Constraints & Guardrails
-- **Webhooks only:** No polling, only HTTPS webhooks for all deployments
-- **HTTPS everywhere:** All communication via secure HTTPS (ngrok/Let's Encrypt)
+- **Webhooks only:** No polling, only HTTPS webhooks for all deployments ✅ IMPLEMENTED
+- **HTTPS everywhere:** All communication via secure HTTPS (cloudflared/Let's Encrypt)
 - **Domain required:** Production needs domain for Let's Encrypt certificates
 - **Fail fast on env:** Exit with clear message if TELEGRAM_BOT_TOKEN missing
 - **No RAG yet:** Qdrant runs but unused

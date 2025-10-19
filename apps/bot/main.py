@@ -1,8 +1,6 @@
 """Main FastAPI application with aiogram integration."""
 
-import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -16,7 +14,7 @@ from .routes.health import router as health_router
 from .settings import settings
 from .tg import handlers
 
-# Configure logging
+# Configure logging (minimal but structured)
 logging.basicConfig(level=logging.INFO)
 logger.add(
     "logs/bot.log", rotation="10 MB", retention="1 week", level="INFO", encoding="utf-8"
@@ -27,7 +25,7 @@ logger.add(
 async def lifespan(app: FastAPI):
     """Application lifespan context manager."""
     # Startup
-    logger.info("Starting Telegram RAG Bot...")
+    logger.info("🚀 Starting Telegram RAG Bot")
 
     # Initialize bot and dispatcher for later use
     try:
@@ -38,59 +36,71 @@ async def lifespan(app: FastAPI):
         app.state.bot = bot
         app.state.dp = dp
 
-        logger.info(f"Bot configured for token: {settings.telegram_bot_token[:10]}...")
+        # Validate bot token by getting bot info
+        try:
+            bot_info = await bot.get_me()
+            logger.info(f"🤖 Bot ready: @{bot_info.username} (id={bot_info.id})")
+        except Exception as e:
+            logger.error(f"❌ Bot token is invalid: {e}")
+            logger.error("Please check your TELEGRAM_BOT_TOKEN environment variable")
+            raise
         if settings.allowed_user_ids:
-            logger.info(f"Restricted to users: {settings.allowed_user_ids_list}")
+            logger.info(
+                f"🔒 Access restricted to users: {settings.allowed_user_ids_list}"
+            )
     except Exception as e:
         logger.warning(f"Bot initialization failed: {e}")
         logger.warning("Running in demo mode without Telegram bot functionality")
         app.state.bot = None
         app.state.dp = None
 
-    # Setup webhook if URL is provided (by cloudflared tunnel)
-    # In Docker mode, we run in polling mode for simplicity
-    if app.state.bot and settings.webhook_url and not os.getenv("DOCKER_CONTAINER"):
-        logger.info(f"Setting up webhook: {settings.webhook_url}")
+    # Setup webhook if URL is provided
+    webhook_url = settings.webhook_url
+
+    # If no webhook URL from env, try to read from file
+    if not webhook_url:
         try:
-            await app.state.bot.set_webhook(
-                url=settings.webhook_url, drop_pending_updates=True
-            )
-            logger.info("✅ Webhook configured successfully")
+            webhook_file = Path("/app/data/webhook_url.txt")
+            if webhook_file.exists():
+                webhook_url = webhook_file.read_text().strip()
+                logger.info(f"🔗 Webhook URL detected: {webhook_url}")
+        except Exception as e:
+            logger.warning(f"Could not read webhook URL from file: {e}")
+
+    if app.state.bot and webhook_url:
+        logger.info("⚙️ Setting webhook")
+        try:
+            await app.state.bot.set_webhook(url=webhook_url, drop_pending_updates=True)
+            logger.info("✅ Webhook configured")
+
+            # Verify webhook was set correctly
+            webhook_info = await app.state.bot.get_webhook_info()
+            if webhook_info.url == webhook_url:
+                logger.info(f"🧪 Webhook verified: {webhook_info.url}")
+            else:
+                logger.warning(
+                    f"⚠️ Webhook URL mismatch. Expected: {webhook_url}, Got: {webhook_info.url}"
+                )
+
         except Exception as e:
             logger.error(f"❌ Failed to set webhook: {e}")
             # Don't exit - webhook can be set manually later
     elif app.state.bot:
-        logger.info("Running in polling mode (Docker or no webhook URL)")
+        logger.warning("No webhook URL configured - bot will not receive updates")
     else:
-        logger.info("Demo mode - no Telegram bot functionality")
+        logger.info("🧪 Demo mode - no Telegram bot functionality")
 
     # Register handlers if bot is available
     if app.state.dp:
         app.state.dp.include_router(handlers.router)
         logger.info("✅ Telegram handlers registered")
     else:
-        logger.info("Demo mode - handlers not registered")
-
-    # Start polling in Docker mode
-    if os.getenv("DOCKER_CONTAINER") and app.state.bot and app.state.dp:
-        logger.info("🚀 Starting bot polling...")
-        polling_task = asyncio.create_task(app.state.dp.start_polling(app.state.bot))
-    else:
-        polling_task = None
+        logger.info("🧪 Demo mode - handlers not registered")
 
     yield
 
-    # Stop polling if running
-    if polling_task:
-        logger.info("🛑 Stopping bot polling...")
-        polling_task.cancel()
-        try:
-            await polling_task
-        except asyncio.CancelledError:
-            pass
-
     # Shutdown
-    logger.info("Shutting down bot...")
+    logger.info("🛑 Shutting down bot")
 
     # Remove webhook if it was set
     if app.state.bot and settings.webhook_url:
@@ -129,6 +139,7 @@ app.include_router(health_router)
 async def telegram_webhook(request: Request):
     """Handle Telegram webhook updates."""
     if not app.state.bot or not app.state.dp:
+        logger.warning("⚠️ Webhook called but bot not initialized")
         return {"status": "error", "message": "Bot not initialized (demo mode)"}
 
     try:
@@ -142,11 +153,10 @@ async def telegram_webhook(request: Request):
 
         # Handle the update
         await app.state.dp.feed_update(bot=app.state.bot, update=update)
-
         return {"status": "ok"}
 
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        logger.error(f"❌ Webhook error: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -170,10 +180,4 @@ async def root():
     }
 
 
-# Middleware to log requests
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all HTTP requests."""
-    logger.info(f"{request.method} {request.url}")
-    response = await call_next(request)
-    return response
+# Removed noisy HTTP access logging middleware

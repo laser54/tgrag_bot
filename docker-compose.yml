@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   # Cloudflared tunnel for HTTPS webhook
   cloudflared:
     image: cloudflare/cloudflared:latest
-    command: tunnel --url http://bot:8080
+    command: tunnel --url http://bot:8080 --logfile /app/data/cloudflared.log --no-autoupdate --protocol quic --transport-loglevel error
     networks:
       - tgrag-network
-    depends_on:
-      - bot
+    volumes:
+      - ./data:/app/data
     restart: unless-stopped
 
   # Main FastAPI application
@@ -21,11 +19,14 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+      - USE_CLOUDFLARED=true
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
     networks:
       - tgrag-network
+    depends_on:
+      - cloudflared
     restart: unless-stopped
 
   # Qdrant vector database
