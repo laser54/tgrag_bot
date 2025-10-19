@@ -9,6 +9,12 @@
 
 > 🚀 **One-command deploy** of a Telegram bot with RAG (Retrieval-Augmented Generation) memory. Users can upload files, index them, and ask intelligent questions powered by vector search.
 
+## ✅ Current Status
+- **Phase 1: Core Infrastructure** ✅ **COMPLETED**
+- **Phase 2: Telegram Bot & Webhooks** 🚧 **IN PROGRESS** (starting webhook endpoint)
+- **Ready for:** Local development, webhook testing, Ubuntu deployment
+- **Tech Stack:** FastAPI + aiogram v3 + Qdrant + Docker
+
 ## ✨ Features
 
 ### 🤖 Telegram Integration
@@ -42,7 +48,7 @@
 - ![Docker](https://img.shields.io/badge/Docker-20.10+-2496ED?style=flat&logo=docker) & Docker Compose
 - ![Telegram](https://img.shields.io/badge/Telegram-Bot_Token-26A5E4?style=flat&logo=telegram) from [@BotFather](https://t.me/botfather)
 
-### ⚡ One-Command Deploy
+### ⚡ One-Command Deploy (Future)
 
 ```bash
 # 1. Clone and setup
@@ -61,25 +67,26 @@ curl http://localhost:8080/health
 # Should return: {"status":"ok"}
 ```
 
-### 🧪 Local Development
+### 🚧 Local Development (Current)
 
 ```bash
-# Setup virtual environment
+# 1. Setup environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# 3. Configure environment
 cp .env.example .env
-# Add your TELEGRAM_BOT_TOKEN to .env
+# Add your TELEGRAM_BOT_TOKEN
 
-# Run development server
+# 4. Run FastAPI server (ready for webhooks)
 python run.py
 
-# API docs available at: http://localhost:8080/docs
+# 5. API available at: http://localhost:8080/docs
 ```
+
 
 ## 🏗️ Architecture
 
@@ -142,33 +149,39 @@ tgrag-bot/
 
 ## 📈 Roadmap
 
-### Phase 1: Core Infrastructure ✅
-- [x] FastAPI backend with health checks
-- [x] Telegram bot skeleton (/start, /menu)
-- [x] Mini App stub interface
-- [x] Docker deployment ready
-- [x] Qdrant integration prepared
+### Phase 1: Core Infrastructure ✅ COMPLETED
+- [x] **Project scaffolding** - Poetry, ruff, pre-commit, professional README
+- [x] **FastAPI backend** - health checks, CORS, logging, static file serving
+- [x] **Environment management** - Pydantic settings, webhook configuration
+- [x] **Development tooling** - run.py script, proper Python path handling
+- [x] **Webhook preparation** - infrastructure ready for Telegram webhooks
 
-### Phase 2: RAG Implementation 🚧
-- [ ] File upload API with validation
-- [ ] Document processing pipeline (PDF, DOCX, TXT)
-- [ ] Vector embeddings generation
-- [ ] Semantic search with Qdrant
-- [ ] Contextual Q&A with citations
+### Phase 2: Telegram Bot & Webhooks 🚧 IN PROGRESS
+- [ ] **Webhook endpoint** - POST /webhook/telegram with aiogram integration
+- [ ] **Bot commands** - /start and /menu handlers with WebApp buttons
+- [ ] **Local development** - ngrok tunneling for webhook testing
+- [ ] **Ubuntu deployment** - automated server setup with HTTPS
 
-### Phase 3: Advanced Features 📋
-- [ ] Multiple file format support
-- [ ] Conversation history and memory
-- [ ] User management dashboard
-- [ ] Analytics and usage metrics
-- [ ] Multi-language support
+### Phase 3: RAG Implementation 📋
+- [ ] **File upload API** - validation and processing pipeline
+- [ ] **Document processing** - PDF, DOCX, TXT format support
+- [ ] **Vector embeddings** - integration with Ollama or OpenAI
+- [ ] **Semantic search** - Qdrant-powered similarity search
+- [ ] **Contextual Q&A** - citations and source references
 
-### Phase 4: Production Polish 🎯
-- [ ] Comprehensive error handling
-- [ ] Rate limiting and security
-- [ ] Monitoring and logging
-- [ ] CI/CD pipeline
-- [ ] Performance optimization
+### Phase 4: Advanced Features 🚀
+- [ ] **Multi-format support** - images, audio, video processing
+- [ ] **Conversation memory** - chat history and context retention
+- [ ] **User management** - admin panel and access controls
+- [ ] **Analytics dashboard** - usage metrics and insights
+- [ ] **Multi-language** - internationalization support
+
+### Phase 5: Production Polish 🎯
+- [ ] **Error handling** - comprehensive exception management
+- [ ] **Security hardening** - rate limiting, input validation
+- [ ] **Monitoring & logging** - centralized observability
+- [ ] **CI/CD pipeline** - automated testing and deployment
+- [ ] **Performance optimization** - caching, async processing
 
 ## 🤝 Contributing
 

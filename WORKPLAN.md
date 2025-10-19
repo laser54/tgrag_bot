@@ -7,6 +7,8 @@ One-command deploy (Docker) of a Telegram bot with RAG memory. Users can drop fi
 
 **Stack:** Python 3.12, aiogram v3 + FastAPI, Qdrant (vector DB), Ollama optional.
 
+**Current Status:** ✅ T1 & T2 completed. 🚧 Starting T3: Webhook-based Telegram bot.
+
 ## Project Structure
 ```
 tgrag-bot/
@@ -35,24 +37,25 @@ tgrag-bot/
 
 ## Work Tasks
 
-### T1 - Repo Hygiene (30-45 min)
+### T1 - Repo Hygiene ✅ COMPLETED (45 min)
 - [x] Add MIT LICENSE
 - [x] Add .gitignore (Python, Node, Docker)
 - [x] Add .editorconfig
-- [x] Add ruff.toml (reasonable defaults)
+- [x] Add ruff.toml (reasonable defaults) - moved to pyproject.toml
 - [x] Add .pre-commit-config.yaml (ruff + trailing-whitespace + end-of-file-fixer)
-- [x] Initialize Poetry/venv with dependencies
-- [x] Create .env.example with required vars
-- [x] Add basic README scaffold
-- [ ] **TEST:** Install pre-commit hooks and run
-- [ ] **COMMIT:** `chore: scaffold repo, tooling, env example`
+- [x] Initialize Poetry/venv with dependencies (FastAPI, aiogram, pydantic-settings, etc.)
+- [x] Create .env.example with required vars + webhook vars
+- [x] Add professional README with badges and comprehensive docs
+- [x] **TEST:** Install pre-commit hooks and run ✅ PASSED
+- [x] **COMMIT:** Multiple commits with proper tooling setup
 
-### T2 - FastAPI Application + Health Route (30 min)
-- [ ] Create apps/bot/main.py: FastAPI app, mount static /webapp/*, include router
-- [ ] Create routes/health.py: GET /health returns {"status":"ok"}
-- [ ] Create settings.py: Pydantic BaseSettings with env validation (TELEGRAM_BOT_TOKEN required)
-- [ ] **TEST:** Run server locally, curl /health returns ok
-- [ ] **COMMIT:** `feat(api): FastAPI app with /health and static webapp`
+### T2 - FastAPI Application + Health Route ✅ COMPLETED (30 min)
+- [x] Create apps/bot/main.py: FastAPI app with lifespan, CORS, logging, mount static /webapp/*
+- [x] Create routes/health.py: GET /health returns {"status":"ok"}
+- [x] Create settings.py: Pydantic BaseSettings with env validation (TELEGRAM_BOT_TOKEN required)
+- [x] Add run.py script for proper Python path handling
+- [x] **TEST:** Run server locally, curl /health returns ok ✅ PASSED
+- [x] **COMMIT:** `feat(api): FastAPI app with /health and static webapp`
 
 ### T3 - Telegram Bot with Webhooks (120-150 min)
 **Goal:** Bot works via webhooks, runs locally, deploys to Ubuntu with 2-3 commands
@@ -119,15 +122,15 @@ tgrag-bot/
 - [ ] **Documentation:** README covers all deployment scenarios
 
 ## Testing Strategy
-- After T1: pre-commit hooks work, basic linting passes
-- After T2: health endpoint responds correctly
-- After T3.1: webhook endpoint accepts POST requests
-- After T3.2: bot handlers process commands correctly
-- After T3.3: ngrok tunnel established, bot receives messages locally
-- After T3.4: Ubuntu deployment script works on clean server
-- After T4: Mini App loads and shows health status
-- After T5: Docker containers start successfully
-- After T6: Complete end-to-end verification (webhook + polling modes)
+- ✅ After T1: pre-commit hooks work, basic linting passes
+- ✅ After T2: health endpoint responds correctly
+- 🚧 After T3.1: webhook endpoint accepts POST requests
+- ⏳ After T3.2: bot handlers process commands correctly
+- ⏳ After T3.3: ngrok tunnel established, bot receives messages locally
+- ⏳ After T3.4: Ubuntu deployment script works on clean server
+- ⏳ After T4: Mini App loads and shows health status
+- ⏳ After T5: Docker containers start successfully
+- ⏳ After T6: Complete end-to-end verification (webhook + polling modes)
 
 ## Commands Reference
 ```bash
