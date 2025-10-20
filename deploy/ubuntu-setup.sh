@@ -252,9 +252,9 @@ main() {
   require_root
   check_args "$@"
   check_os
+  ensure_dependencies
   check_domain_dns
   ensure_ports_free
-  ensure_dependencies
   install_docker
   setup_firewall
   prepare_directories

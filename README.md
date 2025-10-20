@@ -68,6 +68,7 @@ docker compose up --build
 Prerequisites:
 
 - Fresh Ubuntu 22.04/24.04 VPS with public IPv4
+- Outbound HTTPS + curl available (`sudo apt-get update && sudo apt-get install -y curl`)
 - Domain with an A record pointing to the server
 - Telegram bot token
 
