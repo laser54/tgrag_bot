@@ -48,26 +48,7 @@
 - ![Docker](https://img.shields.io/badge/Docker-20.10+-2496ED?style=flat&logo=docker) & Docker Compose
 - ![Telegram](https://img.shields.io/badge/Telegram-Bot_Token-26A5E4?style=flat&logo=telegram) from [@BotFather](https://t.me/botfather)
 
-### ⚡ One-Command Deploy (Future)
-
-```bash
-# 1. Clone and setup
-git clone https://github.com/your-username/tgrag-bot.git
-cd tgrag-bot
-
-# 2. Configure environment
-cp .env.example .env
-# Edit .env with your TELEGRAM_BOT_TOKEN
-
-# 3. Launch everything
-docker compose up -d --build
-
-# 4. Verify deployment
-curl http://localhost:8080/health
-# Should return: {"status":"ok"}
-```
-
-### 🐳 Quick Docker Start (Current)
+### 🐳 Local Docker (cloudflared tunnel)
 
 ```bash
 # Clone repository
@@ -78,11 +59,36 @@ cd tgrag-bot
 cp .env.example .env
 # Add your TELEGRAM_BOT_TOKEN to .env
 
-# Run with Docker Compose
+# Run local stack (bot + cloudflared)
 docker compose up --build
 ```
 
-### 🏠 Local Development (Webhooks + cloudflared)
+### ☁️ Production Deployment (Ubuntu + Traefik)
+
+Prerequisites:
+
+- Fresh Ubuntu 22.04/24.04 VPS with public IPv4
+- Domain with an A record pointing to the server
+- Telegram bot token
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/laser54/tgrag_bot/main/deploy/bootstrap.sh \
+  | sudo bash -s -- bot.example.com 123456:ABC admin@example.com
+```
+
+Arguments: `<domain> <telegram_bot_token> [letsencrypt_email] [allowed_user_ids]`
+
+What the script does:
+
+- Validates OS version, DNS, and that ports 80/443 are free
+- Installs Docker CE + compose plugin, git, and helper utilities
+- Syncs the repo into `/opt/tgrag-bot`
+- Generates `.env` + Traefik env file with HTTPS webhook URL
+- Prepares `data/traefik/acme.json` for certificates (chmod 600)
+- Starts Traefik + bot + Qdrant via `docker-compose.prod.yml`
+- Configures the Telegram webhook and installs a systemd unit
+
+### 🏠 Local Development (cloudflared)
 
 #### 1. Get Telegram Bot Token
 1. Go to [@BotFather](https://t.me/botfather) on Telegram
@@ -233,10 +239,10 @@ tgrag-bot/
 - [x] **Webhook preparation** - infrastructure ready for Telegram webhooks
 
 ### Phase 2: Telegram Bot & Webhooks 🚧 IN PROGRESS
-- [ ] **Webhook endpoint** - POST /webhook/telegram with aiogram integration
-- [ ] **Bot commands** - /start and /menu handlers with WebApp buttons
-- [ ] **Local development** - cloudflared tunneling for webhook testing
-- [ ] **Ubuntu deployment** - automated server setup with HTTPS
+- [ ] **Webhook endpoint** - POST /webhook/telegram powered by aiogram
+- [ ] **Bot commands** - /start and /menu with WebApp button
+- [ ] **Local development** - cloudflared tunnel for webhook testing
+- [ ] **Ubuntu deployment** - Traefik-based automated Docker script
 
 ### Phase 3: RAG Implementation 📋
 - [ ] **File upload API** - validation and processing pipeline

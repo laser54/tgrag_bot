@@ -79,14 +79,17 @@ tgrag-bot/
 - [x] **TEST:** Bot receives messages via cloudflared webhook locally
 - [x] **COMMIT:** `feat(dev): cloudflared docker integration for local webhook development`
 
-#### T3.3 - VPS Ubuntu Deployment (30 min)
-- [ ] Create deploy/ubuntu-setup.sh script (2-3 commands)
-- [ ] Install Python, pip, git, nginx, certbot on clean Ubuntu
-- [ ] Setup systemd service for auto-start
-- [ ] Configure HTTPS with Let's Encrypt (requires domain)
-- [ ] Add production webhook URL configuration
-- [ ] **TEST:** Deploy to clean Ubuntu VPS with domain attached
-- [ ] **COMMIT:** `feat(deploy): ubuntu vps deployment script`
+#### T3.3 - VPS Ubuntu Deployment (45-60 min)
+- [ ] Create `deploy/ubuntu-setup.sh`: single-run script taking domain + token
+- [ ] Validate clean Ubuntu 22.04/24.04, DNS A record, open ports 80/443
+- [ ] Install Docker CE + compose plugin, git, and base utilities
+- [ ] Launch `docker compose` stack with Traefik (TLS/HTTP→HTTPS), bot, Qdrant
+- [ ] Ensure Traefik issues Let's Encrypt certificate for `DOMAIN`
+- [ ] Generate `.env`, configure `WEBHOOK_URL=https://DOMAIN/webhook/telegram`
+- [ ] Register systemd unit for automatic compose startup
+- [ ] Call Telegram `setWebhook` after services are healthy
+- [ ] **TEST:** Deploy on clean VPS → bot responds via HTTPS 443
+- [ ] **COMMIT:** `feat(deploy): ubuntu traefik autopilot`
 
 ### T4 - WebApp Stub (30-45 min)
 - [ ] Create webapp/index.html: minimal page with Telegram WebApp SDK

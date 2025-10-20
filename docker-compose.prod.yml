@@ -1,0 +1,68 @@
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --global.checknewversion=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --log.level=INFO
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik:/letsencrypt
+    networks:
+      - tgrag-network
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - WEBAPP_URL=${WEBAPP_URL}
+      - PORT=8080
+      - USE_CLOUDFLARED=false
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - tgrag-network
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tgrag_bot.rule=Host(`${WEBHOOK_DOMAIN}`)
+      - traefik.http.routers.tgrag_bot.entrypoints=websecure
+      - traefik.http.routers.tgrag_bot.tls.certresolver=letsencrypt
+      - traefik.http.services.tgrag_bot.loadbalancer.server.port=8080
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - tgrag-network
+    restart: unless-stopped
+
+networks:
+  tgrag-network:
+    driver: bridge
+
+volumes:
+  qdrant_data:
