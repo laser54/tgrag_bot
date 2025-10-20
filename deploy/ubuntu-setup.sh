@@ -82,6 +82,28 @@ stop_conflicting_services() {
   done
 }
 
+stop_existing_stack() {
+  if ! command -v docker >/dev/null 2>&1; then
+    return
+  fi
+  if [[ -f /opt/tgrag-bot/docker-compose.prod.yml ]]; then
+    log INFO "Stopping existing docker-compose stack..."
+    docker compose -f /opt/tgrag-bot/docker-compose.prod.yml down -v || \
+      log WARN "Failed to stop existing docker-compose stack"
+  fi
+  mapfile -t containers < <(docker ps -aq --filter "name=tgrag-bot")
+  if [[ ${#containers[@]} -gt 0 ]]; then
+    log INFO "Removing leftover tgrag-bot containers..."
+    docker stop "${containers[@]}" >/dev/null 2>&1 || true
+    docker rm "${containers[@]}" >/dev/null 2>&1 || true
+  fi
+  mapfile -t networks < <(docker network ls -q --filter "name=tgrag-bot")
+  if [[ ${#networks[@]} -gt 0 ]]; then
+    log INFO "Removing leftover tgrag-bot networks..."
+    docker network rm "${networks[@]}" >/dev/null 2>&1 || true
+  fi
+}
+
 install_docker() {
   if command -v docker >/dev/null 2>&1; then
     log INFO "Docker already installed. Skipping."
@@ -293,9 +315,10 @@ main() {
   check_os
   ensure_dependencies
   stop_conflicting_services
+  install_docker
+  stop_existing_stack
   check_domain_dns
   ensure_ports_free
-  install_docker
   setup_firewall
   prepare_directories
   sync_repository
