@@ -8,6 +8,8 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 
 MIN_OS_SUPPORT=("22.04" "24.04")
+APP_UID=1000
+APP_GID=1000
 
 usage() {
   echo "Usage: sudo $0 <domain> <telegram_bot_token> [letsencrypt_email] [allowed_user_ids]" >&2
@@ -144,8 +146,10 @@ setup_firewall() {
 
 prepare_directories() {
   mkdir -p /opt/tgrag-bot
+  mkdir -p /opt/tgrag-bot/logs
+  mkdir -p /opt/tgrag-bot/data
+  mkdir -p /opt/tgrag-bot/data/traefik
   mkdir -p /var/lib/tgrag-bot
-  chown -R root:root /opt/tgrag-bot
 }
 
 sync_repository() {
@@ -161,6 +165,16 @@ sync_repository() {
       git clone https://github.com/laser54/tgrag_bot.git /opt/tgrag-bot
     fi
   fi
+}
+
+ensure_runtime_permissions() {
+  local targets=(/opt/tgrag-bot/logs /opt/tgrag-bot/data)
+  for path in "${targets[@]}"; do
+    if ! chown -R "${APP_UID}:${APP_GID}" "$path" >/dev/null 2>&1; then
+      log WARN "Failed to chown ${path} to ${APP_UID}:${APP_GID}; applying chmod 775"
+      chmod -R 775 "$path"
+    fi
+  done
 }
 
 write_env_file() {
@@ -184,6 +198,7 @@ ensure_acme_store() {
   mkdir -p /opt/tgrag-bot/data/traefik
   touch /opt/tgrag-bot/data/traefik/acme.json
   chmod 600 /opt/tgrag-bot/data/traefik/acme.json
+  chown "${APP_UID}:${APP_GID}" /opt/tgrag-bot/data/traefik/acme.json >/dev/null 2>&1 || true
 }
 
 docker_compose_up() {
@@ -196,12 +211,16 @@ docker_compose_up() {
 
 wait_for_service() {
   log INFO "Waiting for bot health endpoint..."
-  for attempt in {1..30}; do
+  local max_attempts=30
+  for attempt in $(seq 1 "${max_attempts}"); do
     if curl -fsS "http://127.0.0.1:8080/health" >/dev/null 2>&1; then
       log INFO "Bot health endpoint is reachable."
       return
     fi
-    sleep 5
+    if [[ "${attempt}" -lt "${max_attempts}" ]]; then
+      log INFO "  attempt ${attempt}/${max_attempts} failed; retrying in 5s..."
+      sleep 5
+    fi
   done
   log ERROR "Bot health endpoint did not become ready in time."
   exit 1
@@ -276,6 +295,7 @@ main() {
   setup_firewall
   prepare_directories
   sync_repository
+  ensure_runtime_permissions
   write_env_file
   ensure_acme_store
   docker_compose_up
