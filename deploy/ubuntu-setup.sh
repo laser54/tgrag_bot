@@ -64,6 +64,22 @@ ensure_dependencies() {
     ca-certificates curl gnupg lsb-release git ufw jq dnsutils rsync
 }
 
+stop_conflicting_services() {
+  local services=(apache2 nginx)
+  for service in "${services[@]}"; do
+    if systemctl list-unit-files "${service}.service" >/dev/null 2>&1; then
+      if systemctl is-active --quiet "${service}"; then
+        log WARN "Stopping ${service}.service to free ports 80/443."
+        systemctl stop "${service}" || log WARN "Failed to stop ${service}.service"
+      fi
+      if systemctl is-enabled --quiet "${service}"; then
+        log INFO "Disabling ${service}.service"
+        systemctl disable "${service}" >/dev/null 2>&1 || true
+      fi
+    fi
+  done
+}
+
 install_docker() {
   if command -v docker >/dev/null 2>&1; then
     log INFO "Docker already installed. Skipping."
@@ -253,6 +269,7 @@ main() {
   check_args "$@"
   check_os
   ensure_dependencies
+  stop_conflicting_services
   check_domain_dns
   ensure_ports_free
   install_docker
