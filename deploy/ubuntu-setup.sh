@@ -202,6 +202,10 @@ ensure_acme_store() {
 }
 
 docker_compose_up() {
+  if command -v docker >/dev/null 2>&1 && docker compose -f docker-compose.prod.yml ps >/dev/null 2>&1; then
+    log INFO "Stopping existing docker-compose stack..."
+    docker compose -f docker-compose.prod.yml down -v || log WARN "Failed to stop existing stack"
+  fi
   log INFO "Starting Docker stack with Traefik..."
   pushd /opt/tgrag-bot >/dev/null
   docker compose -f docker-compose.prod.yml --env-file .env --env-file .env.traefik pull || true
