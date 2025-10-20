@@ -86,6 +86,16 @@ stop_existing_stack() {
   if ! command -v docker >/dev/null 2>&1; then
     return
   fi
+  if systemctl list-unit-files tgrag-bot.service >/dev/null 2>&1; then
+    if systemctl is-active --quiet tgrag-bot.service; then
+      log INFO "Stopping existing tgrag-bot systemd service..."
+      systemctl stop tgrag-bot.service || log WARN "Failed to stop tgrag-bot.service"
+    fi
+    if systemctl is-enabled --quiet tgrag-bot.service; then
+      log INFO "Disabling tgrag-bot.service"
+      systemctl disable tgrag-bot.service >/dev/null 2>&1 || true
+    fi
+  fi
   if [[ -f /opt/tgrag-bot/docker-compose.prod.yml ]]; then
     log INFO "Stopping existing docker-compose stack..."
     docker compose -f /opt/tgrag-bot/docker-compose.prod.yml down -v || \
