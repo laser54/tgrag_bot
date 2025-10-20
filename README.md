@@ -82,12 +82,13 @@ Arguments: `<domain> <telegram_bot_token> [letsencrypt_email] [allowed_user_ids]
 What the script does:
 
 - Validates OS version, DNS, and that ports 80/443 are free
-- Installs Docker CE + compose plugin, git, and helper utilities
+- Installs Docker CE + compose plugin, git, jq, dnsutils, rsync, ufw
+- Stops/disables nginx/apache and previous `tgrag-bot` systemd/docker stack
 - Syncs the repo into `/opt/tgrag-bot`
 - Generates `.env` + Traefik env file with HTTPS webhook URL
 - Prepares `data/traefik/acme.json` for certificates (chmod 600)
-- Starts Traefik + bot + Qdrant via `docker-compose.prod.yml`
-- Configures the Telegram webhook and installs a systemd unit
+- Builds & starts Traefik + bot + Qdrant via `docker-compose.prod.yml`
+- Waits for bot health with progress output, registers Telegram webhook, installs systemd unit
 
 ### 🏠 Local Development (cloudflared)
 
