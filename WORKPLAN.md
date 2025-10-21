@@ -7,7 +7,7 @@ One-command deploy (Docker) of a Telegram bot with RAG memory. Users can drop fi
 
 **Stack:** Python 3.12, aiogram v3 + FastAPI, Qdrant (vector DB), Ollama optional.
 
-**Current Status:** ✅ T1 & T2 completed. ✅ T3.1 & T3.2 completed. 🚧 Bot ready for production deployment.
+**Current Status:** ✅ T1-T3.3 delivered. ✅ Docker packaging in place. 🚧 Telegram Mini App UX & wiring underway. ⏳ Documentation polish pending.
 
 ## Project Structure
 ```
@@ -89,16 +89,43 @@ tgrag-bot/
 - [x] **TEST:** Deploy on clean VPS → bot responds via HTTPS 443
 - [x] **COMMIT:** `feat(deploy): ubuntu traefik autopilot`
 
-### T4 - WebApp Stub (30-45 min)
-- [ ] Create webapp/index.html: minimal page with Telegram WebApp SDK
-- [ ] Create webapp/app.js: on load call /health, render status, handle SDK gracefully
-- [ ] Create webapp/styles.css: mobile-friendly minimal styles
-- [ ] **TEST:** Open in browser, verify health check works
-- [ ] **COMMIT:** `feat(webapp): stub Mini App with health check`
+### T4 - Telegram WebApp (Document Hub Mini App) (~2-3 days)
+**Goal:** Ship a production-grade Telegram Mini App that feels native, manages documents, and exposes model controls. Backing API calls remain stubs but with real UX flows and request scaffolding.
+
+#### T4.1 - UX Skeleton & Visual Language (0.5 day)
+- [ ] Create `webapp/index.html` with three primary panels: `Document Library`, `Assistant Brain`, `Model Router`.
+- [ ] Wire Telegram WebApp SDK init, theme sync, and responsive layout rules.
+- [ ] Implement `styles.css` with modern mobile-first styling (glassmorphism cards, soft shadows, accent gradient CTA buttons).
+- [ ] Add empty-state illustrations/placeholders (SVG or emoji) for document list and model selector.
+
+#### T4.2 - Document Workflow Hooks (0.75 day)
+- [ ] Surface upload dropzone + file picker (`dragover` + `click`) with post-upload status toasts.
+- [ ] Render document table with columns: `Name`, `Uploaded`, `Indexed`, `Actions`.
+- [ ] Add action buttons: `Add to Index` (POST stub), `Remove from Index` (DELETE stub), `Delete File` (DELETE stub) with optimistic UI and rollback notifications.
+- [ ] Stub API layer in `app.js` exposing methods: `listDocuments()`, `uploadDocument(file)`, `indexDocument(id)`, `removeFromIndex(id)`, `deleteDocument(id)` that currently resolve mocked responses.
+
+#### T4.3 - Assistant Brain Controls (0.5 day)
+- [ ] Embed system prompt editor with live character counter, reset-to-default, and save stub button.
+- [ ] Store prompt draft in local state with autosave indicator (spins on async stub request).
+- [ ] Display current embeddings/model backend for context (read from stub config endpoint).
+- [ ] Document expected REST endpoints: `GET/PUT /api/settings/prompt`, `GET /api/settings/llm`.
+
+#### T4.4 - Model Router & API Providers (0.5 day)
+- [ ] Build provider cards for `Local Ollama`, `OpenAI Compatible`, `Azure OpenAI`, `Custom HTTP` with selection radio buttons.
+- [ ] Add modal/sheet for entering API base URL, key, and model name with validation patterns.
+- [ ] Persist selection to state + stub `PUT /api/settings/provider` call.
+- [ ] Indicate active provider + health using status pill (badge element).
+
+#### T4.5 - Glue Code, QA & Delivery (0.75 day)
+- [ ] Centralize app state (simple store or signals) to keep UI reactive without frameworks.
+- [ ] Implement toast/snackbar utility + loading spinner overlay for long ops.
+- [ ] Write `README` section describing Mini App, controls, and future backend expectations.
+- [ ] **TEST:** Run locally via `python -m http.server` or FastAPI static mount, validate flows in Telegram browser and mobile clients.
+- [ ] **COMMIT:** `feat(webapp): document hub mini app scaffolding`
 
 ### T5 - Docker & Compose (45-60 min)
-- [ ] Create docker/Dockerfile: multi-stage build, expose 8080, run uvicorn
-- [ ] Create docker/compose.yml: bot + qdrant services, volumes, optional ollama
+- [x] Create docker/Dockerfile: multi-stage build, expose 8080, run uvicorn
+- [x] Create docker/compose.yml: bot + qdrant services, volumes, optional ollama
 - [ ] **TEST:** docker compose up -d --build, curl localhost:8080/health returns ok
 - [ ] **COMMIT:** `chore(docker): Dockerfile and compose with qdrant`
 

@@ -4,7 +4,13 @@ import logging
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    MenuButtonWebApp,
+    Message,
+    WebAppInfo,
+)
 
 from ..settings import settings
 
@@ -28,6 +34,17 @@ async def cmd_start(message: Message) -> None:
 
     await message.reply(welcome_text)
     logger.debug(f"Welcome sent to {message.from_user.id}")
+
+    try:
+        await message.bot.set_chat_menu_button(
+            chat_id=message.chat.id,
+            menu_button=MenuButtonWebApp(
+                text="Document Hub",
+                web_app=WebAppInfo(url=settings.webapp_url_full),
+            ),
+        )
+    except Exception as exc:
+        logger.debug(f"Failed to configure chat menu button: {exc}")
 
 
 @router.message(Command("menu"))
@@ -62,6 +79,17 @@ async def cmd_menu(message: Message) -> None:
 
     await message.reply(menu_text, reply_markup=keyboard)
     logger.debug(f"Menu sent to {message.from_user.id}")
+
+    try:
+        await message.bot.set_chat_menu_button(
+            chat_id=message.chat.id,
+            menu_button=MenuButtonWebApp(
+                text="Document Hub",
+                web_app=WebAppInfo(url=settings.webapp_url_full),
+            ),
+        )
+    except Exception as exc:
+        logger.debug(f"Failed to configure chat menu button: {exc}")
 
 
 @router.message()

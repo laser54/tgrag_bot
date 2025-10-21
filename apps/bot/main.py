@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import MenuButtonWebApp, WebAppInfo
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -67,6 +68,21 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning(f"Could not read webhook URL from file: {e}")
 
+    webapp_url_full: str | None = None
+    if webhook_url:
+        settings.webhook_url = webhook_url
+        base_url = webhook_url.removesuffix("/webhook/telegram")
+        base_url = base_url.rstrip("/")
+        webapp_url_full = f"{base_url}/webapp/"
+        settings.webapp_url = webapp_url_full
+        try:
+            webapp_file = Path("/app/data/webapp_url.txt")
+            webapp_file.write_text(webapp_url_full)
+        except Exception as exc:
+            logger.debug(f"Could not cache webapp URL: {exc}")
+        logger.info(f"🌐 WebApp URL resolved: {webapp_url_full}")
+        app.state.webapp_url = webapp_url_full
+
     if app.state.bot and webhook_url:
         logger.info("⚙️ Setting webhook")
         try:
@@ -96,6 +112,24 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Telegram handlers registered")
     else:
         logger.info("🧪 Demo mode - handlers not registered")
+
+    # Configure default menu button with WebApp access
+    if app.state.bot:
+        target_webapp_url = (
+            getattr(app.state, "webapp_url", None)
+            or settings.webapp_url_full
+            or settings.webapp_url
+        )
+        try:
+            await app.state.bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(
+                    text="Document Hub",
+                    web_app=WebAppInfo(url=target_webapp_url),
+                )
+            )
+            logger.info("✅ Chat menu button configured with WebApp")
+        except Exception as exc:
+            logger.warning(f"Could not set chat menu button: {exc}")
 
     yield
 
@@ -163,7 +197,11 @@ async def telegram_webhook(request: Request):
 # Mount static files for webapp
 webapp_path = Path(__file__).parent.parent.parent / "webapp"
 if webapp_path.exists():
-    app.mount("/webapp", StaticFiles(directory=str(webapp_path)), name="webapp")
+    app.mount(
+        "/webapp",
+        StaticFiles(directory=str(webapp_path), html=True),
+        name="webapp",
+    )
     logger.info(f"Mounted webapp static files at: {webapp_path}")
 else:
     logger.warning(f"Webapp directory not found: {webapp_path}")

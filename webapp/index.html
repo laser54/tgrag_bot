@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telegram RAG WebApp</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body>
+    <div id="toast-root" aria-live="polite"></div>
+    <div class="app-shell" id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand__title">Document Hub</span>
+          <span class="brand__tag">beta</span>
+        </div>
+        <div class="topbar__actions">
+          <button class="ghost-button" id="refresh-btn" type="button">
+            <span>Refresh</span>
+          </button>
+          <button class="primary-button" id="upload-btn" type="button">
+            <span>Upload</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel" id="documents">
+          <div class="panel__header">
+            <h2>Document Library</h2>
+            <span class="panel__meta" id="doc-count">0 items</span>
+          </div>
+
+          <div class="dropzone" id="dropzone">
+            <div class="dropzone__icon">📄</div>
+            <p class="dropzone__title">Drop files or tap Upload</p>
+            <p class="dropzone__subtitle">PDF, DOCX, TXT, Markdown</p>
+          </div>
+
+          <div class="table" role="table" aria-label="Documents">
+            <div class="table__row table__row--head" role="row">
+              <div class="table__cell" role="columnheader">Name</div>
+              <div class="table__cell" role="columnheader">Uploaded</div>
+              <div class="table__cell" role="columnheader">Indexed</div>
+              <div class="table__cell table__cell--actions" role="columnheader">Actions</div>
+            </div>
+            <div class="table__body" id="doc-table"></div>
+          </div>
+        </section>
+
+        <section class="panel" id="assistant">
+          <div class="panel__header">
+            <h2>Assistant Brain</h2>
+            <span class="panel__meta" id="prompt-status">Unsaved</span>
+          </div>
+
+          <div class="stack">
+            <label class="form-label" for="prompt-editor">System Prompt</label>
+            <textarea
+              id="prompt-editor"
+              placeholder="Guide the assistant tone, structure, and safety guardrails."
+              maxlength="4000"
+              rows="10"
+            ></textarea>
+            <div class="prompt-footer">
+              <span class="prompt-counter" id="prompt-counter">0 / 4000</span>
+              <div class="prompt-actions">
+                <button class="ghost-button" id="reset-prompt" type="button">Reset</button>
+                <button class="primary-button" id="save-prompt" type="button">Save</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-card" id="context-config">
+            <div>
+              <h3>Context Window</h3>
+              <p class="config-card__meta">Current snippet blending strategy.</p>
+            </div>
+            <div class="chip" id="context-chip">Auto · 3 chunks</div>
+          </div>
+        </section>
+
+        <section class="panel" id="providers">
+          <div class="panel__header">
+            <h2>Model Router</h2>
+            <span class="panel__meta" id="provider-status">No provider selected</span>
+          </div>
+
+          <div class="provider-list" id="provider-list"></div>
+
+          <button class="secondary-button" id="add-provider" type="button">
+            Add Custom Provider
+          </button>
+        </section>
+      </main>
+
+      <footer class="footnote">
+        <span>All actions are currently stubbed. Real API wiring coming next.</span>
+      </footer>
+    </div>
+
+    <dialog class="modal" id="provider-modal">
+      <form method="dialog" class="modal__content">
+        <header class="modal__header">
+          <h3>Provider Settings</h3>
+          <button class="ghost-button" id="close-modal" type="button">Close</button>
+        </header>
+        <div class="modal__body">
+          <label class="form-label" for="provider-name">Display Name</label>
+          <input id="provider-name" name="name" placeholder="My Gateway" />
+
+          <label class="form-label" for="provider-base">Base URL</label>
+          <input
+            id="provider-base"
+            name="base"
+            placeholder="https://api.example.com/v1"
+            type="url"
+          />
+
+          <label class="form-label" for="provider-key">API Key</label>
+          <input
+            id="provider-key"
+            name="key"
+            type="password"
+            placeholder="sk-..."
+          />
+
+          <label class="form-label" for="provider-model">Model Name</label>
+          <input id="provider-model" name="model" placeholder="gpt-4o" />
+        </div>
+        <footer class="modal__footer">
+          <button class="ghost-button" value="cancel" type="button">Cancel</button>
+          <button class="primary-button" value="confirm" type="submit">Save</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <input type="file" id="file-input" hidden multiple />
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

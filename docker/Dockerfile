@@ -36,6 +36,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY apps/ ./apps/
 COPY bin/ ./bin/
+COPY webapp/ ./webapp/
 COPY run.py ./
 
 # Make scripts executable
