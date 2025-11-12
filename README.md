@@ -11,7 +11,7 @@
 
 ## ✅ Current Status
 - **Phase 1: Core Infrastructure** ✅ **COMPLETED**
-- **Phase 2: Telegram Bot & Webhooks** 🚧 **IN PROGRESS** (starting webhook endpoint)
+- **Phase 2: Telegram Bot & Webhooks** ✅ **COMPLETED** (webhook flow, commands, deploy scripts)
 - **Ready for:** Local development, webhook testing, Ubuntu deployment
 - **Tech Stack:** FastAPI + aiogram v3 + Qdrant + Docker
 
@@ -240,11 +240,11 @@ tgrag-bot/
 - [x] **Development tooling** - run.py script, proper Python path handling
 - [x] **Webhook preparation** - infrastructure ready for Telegram webhooks
 
-### Phase 2: Telegram Bot & Webhooks 🚧 IN PROGRESS
-- [ ] **Webhook endpoint** - POST /webhook/telegram powered by aiogram
-- [ ] **Bot commands** - /start and /menu with WebApp button
-- [ ] **Local development** - cloudflared tunnel for webhook testing
-- [ ] **Ubuntu deployment** - Traefik-based automated Docker script
+### Phase 2: Telegram Bot & Webhooks ✅ COMPLETED
+- [x] **Webhook endpoint** - POST /webhook/telegram powered by aiogram
+- [x] **Bot commands** - /start and /menu with WebApp button
+- [x] **Local development** - cloudflared tunnel for webhook testing
+- [x] **Ubuntu deployment** - Traefik-based automated Docker script
 
 ### Phase 3: RAG Implementation 📋
 - [ ] **File upload API** - validation and processing pipeline
