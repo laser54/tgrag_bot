@@ -19,6 +19,10 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+      - QDRANT_URL=${QDRANT_URL:-}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-tgrag-bot}
+      - USE_LOCAL_QDRANT=${USE_LOCAL_QDRANT:-false}
       - USE_CLOUDFLARED=true
     volumes:
       - ./data:/app/data
@@ -40,6 +44,8 @@ services:
     networks:
       - tgrag-network
     restart: unless-stopped
+    profiles:
+      - local-qdrant
 
   # Ollama for local LLM (optional)
   # ollama:

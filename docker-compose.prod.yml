@@ -33,6 +33,10 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+      - QDRANT_URL=${QDRANT_URL:-}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-tgrag-bot}
+      - USE_LOCAL_QDRANT=${USE_LOCAL_QDRANT:-false}
       - WEBHOOK_URL=${WEBHOOK_URL}
       - WEBAPP_URL=${WEBAPP_URL}
       - PORT=8080
@@ -42,8 +46,6 @@ services:
       - ./logs:/app/logs
     networks:
       - tgrag-network
-    depends_on:
-      - qdrant
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -59,6 +61,8 @@ services:
     networks:
       - tgrag-network
     restart: unless-stopped
+    profiles:
+      - local-qdrant
 
 networks:
   tgrag-network:

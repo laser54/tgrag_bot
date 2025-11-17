@@ -59,7 +59,7 @@ cd tgrag-bot
 cp .env.example .env
 # Add your TELEGRAM_BOT_TOKEN to .env
 
-# Run local stack (bot + cloudflared)
+# Run local stack (bot + cloudflared, remote Qdrant optional)
 docker compose up --build
 ```
 
@@ -102,11 +102,14 @@ What the script does:
 # Configure environment
 cp .env.example .env
 # Edit .env and add: TELEGRAM_BOT_TOKEN=your_token_here
+# (Optional) Add QDRANT_URL / QDRANT_API_KEY later, after you create a Qdrant Cloud project
 ```
 
 #### 3. Run with Docker Compose
 ```bash
-python run.py
+python run.py          # remote Qdrant Cloud (default)
+# or
+USE_LOCAL_QDRANT=1 python run.py  # start Docker profile with bundled Qdrant
 ```
 
 **What happens automatically:**
@@ -117,6 +120,13 @@ python run.py
 - Bot becomes available for testing via webhooks
 
 **Check the logs** with `docker compose logs bot` to see webhook setup confirmation!
+
+### 🧠 Qdrant Modes
+- **Default:** the bot boots without any Qdrant credentials and waits for you to supply them later (via `.env` or secrets).
+- **Remote:** when you have credentials, set `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION` (free Qdrant Cloud tier works fine).
+- **Local:** set `USE_LOCAL_QDRANT=1` (or `true`) before `python run.py` or run `docker compose --profile local-qdrant up --build`.
+- When local mode is off, the `qdrant` service is skipped entirely, cutting build time and resource usage.
+- When local mode is on, point `QDRANT_URL` to `http://qdrant:6333` (internal Docker hostname) and leave `QDRANT_API_KEY` empty.
 
 ## 🔍 Diagnostics
 
@@ -205,11 +215,15 @@ tgrag-bot/
 | `ALLOWED_USER_IDS` | Comma-separated user IDs for access control | ❌ | All users |
 | `PORT` | Server port | ❌ | `8080` |
 | `WEBAPP_URL` | Mini App URL | ❌ | `http://localhost:8080/webapp/` |
+| `QDRANT_URL` | Managed Qdrant Cloud endpoint | ❌ (only for remote mode) | - |
+| `QDRANT_API_KEY` | API key for Qdrant Cloud | ❌ (only for remote mode) | - |
+| `QDRANT_COLLECTION` | Default Qdrant collection | ❌ | `tgrag-bot` |
+| `USE_LOCAL_QDRANT` | `true` to run bundled qdrant service | ❌ | `false` |
 
 ### Docker Services
 
 - **bot**: FastAPI application with aiogram polling
-- **qdrant**: Vector database for embeddings (ready for RAG)
+- **qdrant**: Vector database (enabled only with `local-qdrant` profile)
 - **ollama**: Local LLM server (optional, commented out)
 
 ## 🛠️ Tech Stack

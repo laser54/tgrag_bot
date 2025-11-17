@@ -1,63 +1,56 @@
 # Multi-stage build for optimal image size
 FROM python:3.12-slim as builder
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
-# Set work directory
 WORKDIR /app
 
-# Install Python dependencies
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir poetry && \
-    poetry config virtualenvs.create false && \
-    poetry install --only main --no-interaction --no-ansi
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY pyproject.toml poetry.lock ./
+RUN pip install --no-cache-dir poetry poetry-plugin-export && \
+    poetry export -f requirements.txt --without-hashes --output requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm requirements.txt
 
 # Production stage
 FROM python:3.12-slim
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/opt/venv/bin:$PATH"
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app
 
-# Set work directory
 WORKDIR /app
 
-# Copy installed dependencies from builder
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy venv with dependencies
+COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
 COPY apps/ ./apps/
 COPY bin/ ./bin/
 COPY webapp/ ./webapp/
 COPY run.py ./
+COPY docker/entrypoint.sh /entrypoint.sh
 
 # Make scripts executable
-RUN chmod +x bin/get_webhook_url.py
-
-# Create necessary directories
-RUN mkdir -p data logs
+RUN chmod +x /entrypoint.sh bin/get_webhook_url.py
 
 # Change ownership to app user
 RUN chown -R app:app /app
 USER app
 
-# Expose port
 EXPOSE 8080
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD python -c "import sys,urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=5).read()"
 
-# Set environment variable to indicate Docker mode
 ENV DOCKER_CONTAINER=1
 
-# Run application
-CMD ["sh", "-c", "if [ \"$USE_CLOUDFLARED\" = \"true\" ]; then python bin/get_webhook_url.py && python -m uvicorn apps.bot.main:app --host 0.0.0.0 --port 8080 --no-access-log --log-level warning; else python -m uvicorn apps.bot.main:app --host 0.0.0.0 --port 8080 --no-access-log --log-level warning; fi"]
+ENTRYPOINT ["/entrypoint.sh"]

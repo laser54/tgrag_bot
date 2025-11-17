@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     port: int = Field(8080, env="PORT")
     webapp_url: str = Field("http://localhost:8080/webapp/", env="WEBAPP_URL")
     webhook_url: str | None = Field(None, env="WEBHOOK_URL")
+    qdrant_url: str | None = Field(None, env="QDRANT_URL")
+    qdrant_api_key: str | None = Field(None, env="QDRANT_API_KEY")
+    qdrant_collection: str = Field("tgrag-bot", env="QDRANT_COLLECTION")
+    use_local_qdrant: bool = Field(False, env="USE_LOCAL_QDRANT")
 
     class Config:
         """Pydantic configuration."""

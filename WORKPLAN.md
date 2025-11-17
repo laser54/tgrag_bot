@@ -126,6 +126,7 @@ tgrag-bot/
 ### T5 - Docker & Compose (45-60 min)
 - [x] Create docker/Dockerfile: multi-stage build, expose 8080, run uvicorn
 - [x] Create docker/compose.yml: bot + qdrant services, volumes, optional ollama
+- [x] Add `local-qdrant` profile + remote Qdrant Cloud env wiring
 - [ ] **TEST:** docker compose up -d --build, curl localhost:8080/health returns ok
 - [ ] **COMMIT:** `chore(docker): Dockerfile and compose with qdrant`
 
@@ -165,12 +166,17 @@ pip install -r requirements.txt  # fallback if poetry fails
 
 # 1. Local development with cloudflared (automatic HTTPS)
 export TELEGRAM_BOT_TOKEN=your_token
+# You can skip QDRANT_* vars on the very first launch
 python run.py  # automatically starts cloudflared and configures webhooks
 
 # 2. Production on VPS with domain
 # Deploy to clean Ubuntu server with domain attached:
 bash deploy/ubuntu-setup.sh yourdomain.com
 # That's it! Bot will be running with HTTPS
+
+# Local Qdrant profile (optional)
+USE_LOCAL_QDRANT=1 python run.py
+docker compose --profile local-qdrant up --build
 
 # 3. Manual webhook setup (for custom tunnels)
 cloudflared tunnel --url http://localhost:8080  # get https://abc123.trycloudflare.com
@@ -192,3 +198,4 @@ curl http://localhost:8080/health
 - **Clean logs:** Structured INFO on start, WARN on missing config
 - **Security:** Don't log tokens, restrict /menu to private chats
 - **Simple deployment:** 2-3 commands setup on clean Ubuntu server
+- **Qdrant Cloud first:** Managed Qdrant (free tier) by default, local qdrant only when `USE_LOCAL_QDRANT=true`
