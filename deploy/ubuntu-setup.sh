@@ -191,12 +191,32 @@ sync_repository() {
   else
     if [[ -d /opt/tgrag-bot/.git ]]; then
       log INFO "Updating existing repository in /opt/tgrag-bot."
+      cleanup_generated_files
       git -C /opt/tgrag-bot pull --ff-only
     else
       log INFO "Cloning repository to /opt/tgrag-bot."
       git clone https://github.com/laser54/tgrag_bot.git /opt/tgrag-bot
     fi
   fi
+}
+
+cleanup_generated_files() {
+  local repo="/opt/tgrag-bot"
+  local generated=(
+    "data/webapp_url.txt"
+  )
+  if [[ ! -d "${repo}/.git" ]]; then
+    return
+  fi
+  for rel_path in "${generated[@]}"; do
+    local full_path="${repo}/${rel_path}"
+    if [[ -f "${full_path}" ]]; then
+      if ! git -C "${repo}" ls-files --error-unmatch "${rel_path}" >/dev/null 2>&1; then
+        log INFO "Removing generated file ${rel_path} before syncing repository."
+        rm -f "${full_path}"
+      fi
+    fi
+  done
 }
 
 ensure_runtime_permissions() {
