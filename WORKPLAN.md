@@ -15,8 +15,15 @@ tgrag-bot/
 ├─ apps/bot/
 │  ├─ main.py              # FastAPI + aiogram integration
 │  ├─ settings.py          # Pydantic BaseSettings, env validation
+│  ├─ documents/           # In-memory store for uploaded docs (dev stub)
+│  ├─ qdrant/              # Runtime config + status helpers
 │  ├─ tg/handlers.py       # /start, /menu
-│  └─ routes/health.py     # GET /health
+│  └─ routes/
+│      ├─ health.py        # GET /health
+│      ├─ qdrant.py        # GET /qdrant/status
+│      ├─ settings_api.py  # GET/PUT runtime settings (Qdrant etc.)
+│      ├─ documents.py     # CRUD + index/remove document stubs
+│      └─ search.py        # POST /api/search (stubbed)
 ├─ webapp/                 # Mini App (stub)
 │  ├─ index.html
 │  ├─ app.js
@@ -137,6 +144,27 @@ tgrag-bot/
 - [ ] **TEST:** Follow README instructions to verify setup works
 - [ ] **COMMIT:** `docs: quickstart, troubleshooting, roadmap`
 
+### T7 - Qdrant Cloud Integration ✅ COMPLETED (0.5 day)
+- [x] Extend `settings.py` with `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION`, `USE_LOCAL_QDRANT`, defaulting to a safe `not_configured` mode.
+- [x] Add runtime config store + `/qdrant/status` endpoint to report mode, reachability, collection existence, and usage counters without leaking secrets.
+- [x] Expose `/api/settings/qdrant` (GET/PUT) so operators enter Qdrant Cloud credentials after deployment via the Mini App instead of baking them into `.env`.
+- [x] Build Mini App panel for mode switching (cloud/local/disabled), credential entry, and live status/metrics with toast feedback.
+- [x] Document the post-install workflow: deploy first, then open the WebApp → Vector Store card → paste Qdrant Cloud URL/key to go live.
+
+### T8 - Document Ingestion Pipeline 🚧 IN PROGRESS (~1 day)
+- [x] Implement thread-safe in-memory `DocumentStore` with upload timestamps, sizes, indexing flags, and chunk counters.
+- [x] Ship `/api/documents` CRUD endpoints plus indexing/removal stubs that guard on Qdrant availability and keep the Mini App optimistic UI in sync.
+- [ ] Persist uploads to disk/object storage (beyond metadata) for future processing workers.
+- [ ] Implement file chunking/tokenization strategy per format (PDF/DOCX/TXT/Markdown) with overlap and metadata payloads for Qdrant.
+- [ ] Invoke OpenAI embedding API + Qdrant upserts/deletes as soon as credentials are available.
+- [ ] **TEST:** Upload → index → reindex → delete flows visible both in the Mini App and API logs.
+
+### T9 - Semantic Search API 🚧 PLANNED (0.5 day)
+- [x] Add `/api/search` stub that returns mocked chunks referencing current documents to unblock UX wiring.
+- [ ] Replace stub with real Qdrant similarity search once embeddings/Qdrant writes are enabled.
+- [ ] Support filters (document IDs/tags) and pagination to keep the API future-proof.
+- [ ] Document response schema for downstream chat/answering endpoint integration.
+
 ## Definition of Done
 - [ ] **Local webhook development:** Bot receives messages via cloudflared HTTPS tunnel
 - [ ] **VPS deployment:** Clean Ubuntu + domain → 2-3 commands → production bot
@@ -194,8 +222,9 @@ curl http://localhost:8080/health
 - **HTTPS everywhere:** All communication via secure HTTPS (cloudflared/Let's Encrypt)
 - **Domain required:** Production needs domain for Let's Encrypt certificates
 - **Fail fast on env:** Exit with clear message if TELEGRAM_BOT_TOKEN missing
-- **No RAG yet:** Qdrant runs but unused
+- **RAG stubs only:** Document + search APIs exist but still use mocked embeddings until OpenAI wiring ships
 - **Clean logs:** Structured INFO on start, WARN on missing config
 - **Security:** Don't log tokens, restrict /menu to private chats
 - **Simple deployment:** 2-3 commands setup on clean Ubuntu server
 - **Qdrant Cloud first:** Managed Qdrant (free tier) by default, local qdrant only when `USE_LOCAL_QDRANT=true`
+- **Post-install Qdrant config:** Default install ships with `not_configured` mode; operators paste Cloud credentials inside the Mini App when ready

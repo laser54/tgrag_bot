@@ -25,7 +25,9 @@
 
 ### 🧠 RAG-Powered Intelligence
 - **Vector Search**: Qdrant vector database for semantic search
+- **Qdrant Cloud Ready**: Default install ships in `not_configured` mode; drop credentials into the Mini App → Vector Store panel to flip between Cloud and local Docker backends. `/api/settings/qdrant` + `/qdrant/status` expose runtime health/usage.
 - **Document Processing**: Ready for file upload and indexing pipeline
+- **Document APIs Today**: `/api/documents` CRUD + `/api/search` stubs keep the Mini App fully interactive while OpenAI embeddings/LLM wiring is pending.
 - **Contextual Responses**: Citations and source references in answers
 - **Extensible**: Modular design for adding new file formats
 
@@ -118,6 +120,7 @@ USE_LOCAL_QDRANT=1 python run.py  # start Docker profile with bundled Qdrant
 - Bot automatically reads the tunnel URL from cloudflared logs
 - Registers webhook: `https://abc123.trycloudflare.com/webhook/telegram`
 - Bot becomes available for testing via webhooks
+- Vector Store panel inside the Mini App stays in `Not configured` mode until you paste Qdrant Cloud credentials (URL + API key) post-install.
 
 **Check the logs** with `docker compose logs bot` to see webhook setup confirmation!
 
@@ -127,6 +130,7 @@ USE_LOCAL_QDRANT=1 python run.py  # start Docker profile with bundled Qdrant
 - **Local:** set `USE_LOCAL_QDRANT=1` (or `true`) before `python run.py` or run `docker compose --profile local-qdrant up --build`.
 - When local mode is off, the `qdrant` service is skipped entirely, cutting build time and resource usage.
 - When local mode is on, point `QDRANT_URL` to `http://qdrant:6333` (internal Docker hostname) and leave `QDRANT_API_KEY` empty.
+- Runtime changes happen through the Mini App (Vector Store card) or programmatically via `PUT /api/settings/qdrant`, so you can deploy first and configure Qdrant later.
 
 ## 🔍 Diagnostics
 
@@ -181,6 +185,16 @@ curl http://localhost:8080/status
 #### 6. API Documentation
 When running, API docs available at: `http://localhost:8080/docs`
 
+## 🔌 Runtime APIs (current stubs)
+- `GET /health` – FastAPI health probe
+- `GET /qdrant/status` – Current mode (`cloud`, `local`, `disabled`, `not_configured`), reachability, collection health, and vector counters
+- `GET/PUT /api/settings/qdrant` – Read or update Qdrant URL/API key/collection (Mini App uses this for post-install credentials)
+- `GET /api/documents` – List uploaded documents with metadata, index flags, and chunk counts
+- `POST /api/documents` – Upload a file (metadata-only today) and queue it for future processing
+- `POST /api/documents/{id}/index` – Stub indexer; validates Qdrant availability before toggling the `indexed` flag
+- `POST /api/documents/{id}/remove-from-index` – Stub removal endpoint that flips `indexed=false` and clears chunk counters
+- `DELETE /api/documents/{id}` – Delete stored metadata (vectors will be removed once RAG is fully wired)
+- `POST /api/search` – Stub semantic search returning mocked chunks referencing uploaded docs
 
 ## 🏗️ Architecture
 
@@ -189,10 +203,15 @@ tgrag-bot/
 ├── apps/bot/                 # Main FastAPI application
 │   ├── main.py              # Application entry point & lifespan
 │   ├── settings.py          # Pydantic configuration
+│   ├── documents/           # In-memory document store (dev stub)
+│   ├── qdrant/              # Runtime config + status helpers
 │   ├── tg/handlers.py       # Telegram bot handlers (T3)
 │   └── routes/
 │       ├── health.py        # Health check endpoint
-│       └── api.py           # API routes (future)
+│       ├── qdrant.py        # GET /qdrant/status
+│       ├── settings_api.py  # Runtime settings (Qdrant etc.)
+│       ├── documents.py     # Document CRUD + index/remove stubs
+│       └── search.py        # POST /api/search (stubbed)
 ├── webapp/                  # Telegram Mini App frontend
 │   ├── index.html           # Main Mini App page
 │   ├── app.js              # Frontend logic
@@ -215,10 +234,15 @@ tgrag-bot/
 | `ALLOWED_USER_IDS` | Comma-separated user IDs for access control | ❌ | All users |
 | `PORT` | Server port | ❌ | `8080` |
 | `WEBAPP_URL` | Mini App URL | ❌ | `http://localhost:8080/webapp/` |
-| `QDRANT_URL` | Managed Qdrant Cloud endpoint | ❌ (only for remote mode) | - |
-| `QDRANT_API_KEY` | API key for Qdrant Cloud | ❌ (only for remote mode) | - |
+| `QDRANT_URL` | Managed Qdrant Cloud endpoint (optional, can be set later via Mini App) | ❌ | - |
+| `QDRANT_API_KEY` | API key for Qdrant Cloud (write-only, usually entered via Mini App) | ❌ | - |
 | `QDRANT_COLLECTION` | Default Qdrant collection | ❌ | `tgrag-bot` |
 | `USE_LOCAL_QDRANT` | `true` to run bundled qdrant service | ❌ | `false` |
+| `OPENAI_API_KEY` | API key for OpenAI/OpenAI-compatible provider (planned) | ❌ | - |
+| `OPENAI_EMBEDDING_MODEL` | Embedding model name (e.g. `text-embedding-3-small`) | ❌ | `text-embedding-3-small` |
+| `OPENAI_LLM_MODEL` | Chat/answering model (e.g. `gpt-4o-mini`) | ❌ | `gpt-4o-mini` |
+
+> `QDRANT_*` vars are optional because the default workflow is to paste credentials into the Mini App (or call `/api/settings/qdrant`) after the bot is already running. `OPENAI_*` entries are placeholders for the upcoming embedding + answer pipeline that will call OpenAI-compatible endpoints.
 
 ### Docker Services
 

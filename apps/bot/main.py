@@ -11,7 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
+from .routes.documents import router as documents_router
 from .routes.health import router as health_router
+from .routes.qdrant import router as qdrant_router
+from .routes.search import router as search_router
+from .routes.settings_api import router as settings_router
 from .settings import settings
 from .tg import handlers
 
@@ -167,6 +171,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health_router)
+app.include_router(qdrant_router)
+app.include_router(documents_router)
+app.include_router(settings_router)
+app.include_router(search_router)
 
 
 @app.post("/webhook/telegram")

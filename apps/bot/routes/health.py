@@ -2,6 +2,9 @@
 
 from fastapi import APIRouter, Request
 
+from ..qdrant import qdrant_config_store
+from ..qdrant.status import get_qdrant_status
+
 router = APIRouter()
 
 
@@ -41,5 +44,8 @@ async def bot_status(request: Request):
             status["webhook_pending_updates"] = webhook_info.pending_update_count
         except Exception as e:
             status["webhook_error"] = str(e)
+
+    qdrant_status = await get_qdrant_status(qdrant_config_store)
+    status["qdrant"] = qdrant_status.to_dict()
 
     return status

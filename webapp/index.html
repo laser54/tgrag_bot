@@ -81,6 +81,82 @@
           </div>
         </section>
 
+        <section class="panel" id="qdrant-panel">
+          <div class="panel__header">
+            <h2>Vector Store (Qdrant Cloud)</h2>
+            <span class="panel__meta status-pill" id="qdrant-status-label">Not configured</span>
+          </div>
+
+          <form class="stack qdrant-form" id="qdrant-form">
+            <fieldset class="segmented-control">
+              <legend>Mode</legend>
+              <label class="segmented-control__option">
+                <input type="radio" name="mode" value="not_configured" checked />
+                <span>Not configured</span>
+              </label>
+              <label class="segmented-control__option">
+                <input type="radio" name="mode" value="cloud" />
+                <span>Qdrant Cloud</span>
+              </label>
+              <label class="segmented-control__option">
+                <input type="radio" name="mode" value="local" />
+                <span>Local Docker</span>
+              </label>
+              <label class="segmented-control__option">
+                <input type="radio" name="mode" value="disabled" />
+                <span>Disabled</span>
+              </label>
+            </fieldset>
+
+            <label class="form-label" for="qdrant-url">Qdrant URL</label>
+            <input
+              id="qdrant-url"
+              name="url"
+              type="url"
+              placeholder="https://cluster.us-east-1-0.aws.cloud.qdrant.io"
+            />
+
+            <label class="form-label" for="qdrant-collection">Collection name</label>
+            <input id="qdrant-collection" name="collection" placeholder="tgrag-bot" />
+
+            <label class="form-label" for="qdrant-key">
+              API key
+              <span class="form-hint">Write-only, never shown</span>
+            </label>
+            <input
+              id="qdrant-key"
+              name="api_key"
+              type="password"
+              placeholder="paste key from Qdrant Cloud"
+            />
+
+            <div class="status-card" id="qdrant-metrics">
+              <div>
+                <p>Connection</p>
+                <strong id="qdrant-connection">Not configured</strong>
+              </div>
+              <div>
+                <p>Points stored</p>
+                <strong id="qdrant-points">–</strong>
+              </div>
+              <div>
+                <p>Vector count</p>
+                <strong id="qdrant-vectors">–</strong>
+              </div>
+            </div>
+
+            <p class="helper-text">
+              Qdrant Cloud free tier supports 1 index, 1M vectors, and is perfect for prototyping.
+              Enter credentials after deployment; you can switch back to local Docker anytime.
+            </p>
+
+            <div class="form-actions">
+              <button class="ghost-button" id="qdrant-refresh" type="button">Check status</button>
+              <button class="primary-button" id="qdrant-save" type="submit">Save settings</button>
+            </div>
+          </form>
+        </section>
+
         <section class="panel" id="providers">
           <div class="panel__header">
             <h2>Model Router</h2>
