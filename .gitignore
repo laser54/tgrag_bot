@@ -273,3 +273,11 @@ Thumbs.db
 
 # Pre-commit
 .pre-commit-config.yaml.backup
+
+# Cursor IDE
+.cursorrules
+
+# Cloudflared temporary files
+data/webhook_url.txt
+data/webapp_url.txt
+data/cloudflared.log
