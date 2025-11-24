@@ -5,7 +5,7 @@ One-command deploy (Docker) of a Telegram bot with RAG memory. Users can drop fi
 
 **Principles:** Simplicity > features, sane defaults, no GPU, works on Linux/x86_64 and Apple Silicon.
 
-**Stack:** Python 3.12, aiogram v3 + FastAPI, Qdrant (vector DB), Ollama optional.
+**Stack:** Python 3.12, aiogram v3 + FastAPI, Qdrant (vector DB), LlamaIndex (RAG framework), Ollama optional.
 
 **Current Status:** ✅ T1-T3.3 delivered. ✅ Docker packaging in place. 🚧 Telegram Mini App UX & wiring underway. ⏳ Documentation polish pending.
 
@@ -17,13 +17,15 @@ tgrag-bot/
 │  ├─ settings.py          # Pydantic BaseSettings, env validation
 │  ├─ documents/           # In-memory store for uploaded docs (dev stub)
 │  ├─ qdrant/              # Runtime config + status helpers
+│  ├─ rag/                 # LlamaIndex RAG services (T10)
 │  ├─ tg/handlers.py       # /start, /menu
 │  └─ routes/
 │      ├─ health.py        # GET /health
 │      ├─ qdrant.py        # GET /qdrant/status
 │      ├─ settings_api.py  # GET/PUT runtime settings (Qdrant etc.)
 │      ├─ documents.py     # CRUD + index/remove document stubs
-│      └─ search.py        # POST /api/search (stubbed)
+│      ├─ search.py        # POST /api/search (stubbed)
+│      └─ chat.py          # POST /api/chat (T10.4)
 ├─ webapp/                 # Mini App (stub)
 │  ├─ index.html
 │  ├─ app.js
@@ -155,15 +157,47 @@ tgrag-bot/
 - [x] Implement thread-safe in-memory `DocumentStore` with upload timestamps, sizes, indexing flags, and chunk counters.
 - [x] Ship `/api/documents` CRUD endpoints plus indexing/removal stubs that guard on Qdrant availability and keep the Mini App optimistic UI in sync.
 - [ ] Persist uploads to disk/object storage (beyond metadata) for future processing workers.
-- [ ] Implement file chunking/tokenization strategy per format (PDF/DOCX/TXT/Markdown) with overlap and metadata payloads for Qdrant.
-- [ ] Invoke OpenAI embedding API + Qdrant upserts/deletes as soon as credentials are available.
+- [ ] ~~Implement file chunking/tokenization strategy per format (PDF/DOCX/TXT/Markdown) with overlap and metadata payloads for Qdrant.~~ → Moved to T10 with LlamaIndex.
+- [ ] ~~Invoke OpenAI embedding API + Qdrant upserts/deletes as soon as credentials are available.~~ → Moved to T10 with LlamaIndex.
 - [ ] **TEST:** Upload → index → reindex → delete flows visible both in the Mini App and API logs.
 
 ### T9 - Semantic Search API 🚧 PLANNED (0.5 day)
 - [x] Add `/api/search` stub that returns mocked chunks referencing current documents to unblock UX wiring.
-- [ ] Replace stub with real Qdrant similarity search once embeddings/Qdrant writes are enabled.
+- [ ] ~~Replace stub with real Qdrant similarity search once embeddings/Qdrant writes are enabled.~~ → Moved to T10 with LlamaIndex query engine.
 - [ ] Support filters (document IDs/tags) and pagination to keep the API future-proof.
 - [ ] Document response schema for downstream chat/answering endpoint integration.
+
+### T10 - LlamaIndex RAG Integration 🚧 PLANNED (~2 days)
+**Goal:** Integrate LlamaIndex as the core RAG framework, leveraging Qdrant for vector storage. Replace manual chunking/embeddings with LlamaIndex's high-level APIs for document ingestion, indexing, and retrieval.
+
+#### T10.1 - LlamaIndex Setup & Dependencies (0.5 day)
+- [ ] Add LlamaIndex core, vector-stores-qdrant, embeddings-openai to pyproject.toml.
+- [ ] Update Docker build to include new deps (ensure compatibility with existing Qdrant client).
+- [ ] Create `apps/bot/rag/` module with LlamaIndex service classes: `DocumentIndexer`, `QueryEngine`.
+- [ ] Initialize LlamaIndex with Qdrant vector store, using existing config from `qdrant/config_store.py`.
+- [ ] **TEST:** Basic LlamaIndex + Qdrant connection works, can create empty index.
+
+#### T10.2 - Document Ingestion with LlamaIndex (0.75 day)
+- [ ] Replace manual chunking in T8 with LlamaIndex `SimpleDirectoryReader` + `SentenceSplitter` for supported formats (PDF, DOCX, TXT, Markdown).
+- [ ] Implement `DocumentIndexer.add_document(file_path, metadata)` using LlamaIndex's `VectorStoreIndex.from_documents()` with Qdrant as backend.
+- [ ] Update `/api/documents` index endpoint to call LlamaIndex ingestion, track chunk counts, and store metadata.
+- [ ] Handle reindexing: remove old nodes by metadata filter, re-add with updated content.
+- [ ] Add error handling for unsupported formats or embedding failures.
+- [ ] **TEST:** Upload document → index → verify vectors in Qdrant collection.
+
+#### T10.3 - Semantic Search with LlamaIndex Query Engine (0.5 day)
+- [ ] Update `/api/search` to use LlamaIndex `RetrieverQueryEngine` with similarity search over Qdrant.
+- [ ] Support filters: document IDs via metadata, pagination (limit/offset).
+- [ ] Return structured response: chunks with scores, source document metadata.
+- [ ] Integrate with existing Qdrant config checks (reachable, collection exists).
+- [ ] **TEST:** Search query returns relevant chunks from indexed documents.
+
+#### T10.4 - Chat/Answer Endpoint (0.25 day)
+- [ ] Add `/api/chat` POST endpoint for RAG-powered Q&A.
+- [ ] Use LlamaIndex `ConversationalRetrievalChain` or query engine with chat history.
+- [ ] Accept query + optional document filters, return answer + sources.
+- [ ] Wire to Telegram bot handlers for user questions.
+- [ ] **TEST:** Ask question via API, get answer citing indexed docs.
 
 ## Definition of Done
 - [ ] **Local webhook development:** Bot receives messages via cloudflared HTTPS tunnel
@@ -228,3 +262,4 @@ curl http://localhost:8080/health
 - **Simple deployment:** 2-3 commands setup on clean Ubuntu server
 - **Qdrant Cloud first:** Managed Qdrant (free tier) by default, local qdrant only when `USE_LOCAL_QDRANT=true`
 - **Post-install Qdrant config:** Default install ships with `not_configured` mode; operators paste Cloud credentials inside the Mini App when ready
+- **LlamaIndex for RAG:** Use LlamaIndex framework for document processing, embeddings, and retrieval over Qdrant to simplify implementation and ensure best practices
