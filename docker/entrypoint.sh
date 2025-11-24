@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+﻿#!/usr/bin/env sh
 set -e
 
 if [ "${USE_CLOUDFLARED:-false}" = "true" ]; then

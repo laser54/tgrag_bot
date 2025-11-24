@@ -135,40 +135,40 @@ function normalizeQdrantStatus(status, mode, collection) {
 
 function resolveQdrantBadge(mode, status) {
   if (mode === "disabled") {
-    return { label: "Disabled", variant: "warn" };
+    return { label: "🚫 Disabled", variant: "warn" };
   }
   if (status.reachable && status.collection_exists) {
-    return { label: "Connected", variant: "ok" };
+    return { label: "✅ Connected", variant: "ok" };
   }
   if (status.reachable && !status.collection_exists) {
-    return { label: "Connected · no collection", variant: "warn" };
+    return { label: "⚠️ Connected · no collection", variant: "warn" };
   }
   if (mode === "not_configured") {
-    return { label: "Not configured", variant: "warn" };
+    return { label: "⚙️ Not configured", variant: "warn" };
   }
   if (status.last_error) {
-    return { label: "Error", variant: "error" };
+    return { label: "❌ Error", variant: "error" };
   }
-  return { label: "Pending", variant: "warn" };
+  return { label: "⏳ Pending", variant: "warn" };
 }
 
 function describeConnection(status, mode) {
   if (mode === "disabled") {
-    return "Disabled";
+    return "🚫 Disabled";
   }
   if (status.reachable && status.collection_exists) {
-    return "Connected";
+    return "🔗 Connected";
   }
   if (status.reachable) {
-    return "Connected · create collection";
+    return "🔗 Connected · create collection";
   }
   if (status.last_error) {
-    return status.last_error;
+    return `❌ ${status.last_error}`;
   }
   if (mode === "not_configured") {
-    return "Awaiting credentials";
+    return "⏳ Awaiting credentials";
   }
-  return "No status yet";
+  return "❓ No status yet";
 }
 
 function formatMetric(value) {
@@ -439,11 +439,15 @@ function renderQdrantPanel() {
   );
   qdrantUI.statusLabel.classList.add(`status-pill--${variant}`);
   const connectionText = describeConnection(status, mode);
-  qdrantUI.connection.textContent = connectionText;
+  qdrantUI.connection.innerHTML = connectionText;
   qdrantUI.connection.title = status.last_error || connectionText;
   qdrantUI.statusLabel.title = status.last_error || "";
-  qdrantUI.points.textContent = formatMetric(status.points_count);
-  qdrantUI.vectors.textContent = formatMetric(status.vectors_count);
+  const pointsValue = formatMetric(status.points_count);
+  const vectorsValue = formatMetric(status.vectors_count);
+  qdrantUI.points.innerHTML = `📊 ${pointsValue}`;
+  qdrantUI.vectors.innerHTML = `📈 ${vectorsValue}`;
+  qdrantUI.points.style.color = status.points_count > 0 ? 'var(--text)' : 'var(--text-muted)';
+  qdrantUI.vectors.style.color = status.vectors_count > 0 ? 'var(--text)' : 'var(--text-muted)';
 }
 
 async function loadQdrantSettings({ silent = true } = {}) {
@@ -674,6 +678,12 @@ function bootstrap() {
   renderPrompt();
   renderProviders();
   loadDocuments({ silent: true });
+
+  // Add fade-in animation to panels
+  const panels = document.querySelectorAll('.panel');
+  panels.forEach((panel, index) => {
+    setTimeout(() => panel.classList.add('fade-in'), index * 100);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", bootstrap);

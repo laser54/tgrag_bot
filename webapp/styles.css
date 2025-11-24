@@ -7,13 +7,19 @@
   --text-muted: rgba(246, 247, 251, 0.65);
   --border: rgba(255, 255, 255, 0.09);
   --shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 25px 60px rgba(0, 0, 0, 0.5);
   --radius-lg: 24px;
   --radius-md: 16px;
   --radius-sm: 12px;
   --accent: linear-gradient(135deg, #6f7bf7 0%, #4b9cf7 50%, #2ad3e3 100%);
   --accent-solid: #5c75f6;
   --accent-solid-2: #2ad3e3;
+  --gradient-bg: radial-gradient(circle at top, rgba(72, 94, 247, 0.3), transparent 50%);
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  transition: all 0.2s ease;
 }
 
 * {
@@ -22,8 +28,7 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, rgba(72, 94, 247, 0.22), transparent 45%),
-    #0f1217;
+  background: var(--gradient-bg), #0f1217;
   color: var(--text);
   min-height: 100vh;
 }
@@ -36,6 +41,15 @@ body {
   padding: 1.5rem;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .topbar {
@@ -102,9 +116,20 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.secondary-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
 .ghost-button {
   background: transparent;
   color: var(--text-muted);
+}
+
+.ghost-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
 }
 
 .ghost-button:hover,
@@ -127,6 +152,12 @@ button {
   gap: 1.5rem;
   border: 1px solid var(--border);
   min-height: 320px;
+  box-shadow: var(--shadow);
+}
+
+.panel:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
 }
 
 .panel__header {
@@ -152,6 +183,11 @@ button {
   text-align: center;
   background: var(--card-muted);
   transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.dropzone:hover {
+  border-color: var(--accent-solid);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .dropzone.dragover {
@@ -190,6 +226,11 @@ button {
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.table__row:not(.table__row--head):hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .table__row--head {
@@ -297,6 +338,9 @@ button {
 
 .status-card strong {
   font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .helper-text {

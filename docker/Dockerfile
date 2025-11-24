@@ -10,9 +10,10 @@ WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY pyproject.toml poetry.lock ./
-RUN pip install --no-cache-dir poetry poetry-plugin-export && \
-    poetry export -f requirements.txt --without-hashes --output requirements.txt && \
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir poetry poetry-plugin-export
+RUN poetry lock
+RUN poetry export -f requirements.txt --without-hashes --output requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
@@ -39,11 +40,13 @@ COPY webapp/ ./webapp/
 COPY run.py ./
 COPY docker/entrypoint.sh /entrypoint.sh
 
-# Make scripts executable
-RUN chmod +x /entrypoint.sh bin/get_webhook_url.py
+# Fix BOM, line endings, and make scripts executable
+RUN sed -i '1s/^\xEF\xBB\xBF//' /entrypoint.sh && \
+    sed -i 's/\r$//' /entrypoint.sh && \
+    chmod +x /entrypoint.sh bin/get_webhook_url.py
 
 # Change ownership to app user
-RUN chown -R app:app /app
+RUN chown -R app:app /app /entrypoint.sh
 USER app
 
 EXPOSE 8080
