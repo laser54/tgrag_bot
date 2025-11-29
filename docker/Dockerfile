@@ -10,10 +10,23 @@ WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY pyproject.toml ./
+# Copy dependency files (poetry.lock is optional - speeds up if present)
+COPY pyproject.toml poetry.lock* ./
+
+# Install poetry with export plugin
 RUN pip install --no-cache-dir poetry poetry-plugin-export
+
+# Configure poetry to use existing venv and not create new one
+ENV POETRY_VENV_IN_PROJECT=false \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false
+
+# Update lock file if needed (poetry lock is smart - won't recreate if up-to-date)
 RUN poetry lock
-RUN poetry export -f requirements.txt --without-hashes --output requirements.txt && \
+
+# Install dependencies using export + pip (more reliable with package-mode=false)
+# Export to requirements.txt and install - this works reliably with package-mode=false
+RUN poetry export --without-hashes --only main -o requirements.txt && \
     pip install --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
