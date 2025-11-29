@@ -1,5 +1,6 @@
 """Main FastAPI application with aiogram integration."""
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -89,22 +90,44 @@ async def lifespan(app: FastAPI):
 
     if app.state.bot and webhook_url:
         logger.info("⚙️ Setting webhook")
-        try:
-            await app.state.bot.set_webhook(url=webhook_url, drop_pending_updates=True)
-            logger.info("✅ Webhook configured")
+        max_retries = 3
+        retry_delay = 2
 
-            # Verify webhook was set correctly
-            webhook_info = await app.state.bot.get_webhook_info()
-            if webhook_info.url == webhook_url:
-                logger.info(f"🧪 Webhook verified: {webhook_info.url}")
-            else:
-                logger.warning(
-                    f"⚠️ Webhook URL mismatch. Expected: {webhook_url}, Got: {webhook_info.url}"
+        for attempt in range(max_retries):
+            try:
+                await app.state.bot.set_webhook(
+                    url=webhook_url, drop_pending_updates=True
                 )
+                logger.info("✅ Webhook configured")
 
-        except Exception as e:
-            logger.error(f"❌ Failed to set webhook: {e}")
-            # Don't exit - webhook can be set manually later
+                # Verify webhook was set correctly
+                webhook_info = await app.state.bot.get_webhook_info()
+                if webhook_info.url == webhook_url:
+                    logger.info(f"🧪 Webhook verified: {webhook_info.url}")
+                    break
+                else:
+                    logger.warning(
+                        f"⚠️ Webhook URL mismatch. Expected: {webhook_url}, Got: {webhook_info.url}"
+                    )
+                    if attempt < max_retries - 1:
+                        logger.info(
+                            f"Retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})"
+                        )
+                        await asyncio.sleep(retry_delay)
+                    else:
+                        logger.error("Failed to verify webhook after all retries")
+            except Exception as e:
+                logger.error(
+                    f"❌ Failed to set webhook (attempt {attempt + 1}/{max_retries}): {e}"
+                )
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay}s...")
+                    await asyncio.sleep(retry_delay)
+                else:
+                    logger.warning(
+                        "Webhook setup failed after all retries - bot may not receive updates"
+                    )
+                    # Don't exit - webhook can be set manually later
     elif app.state.bot:
         logger.warning("No webhook URL configured - bot will not receive updates")
     else:
@@ -187,6 +210,8 @@ async def telegram_webhook(request: Request):
     try:
         # Get update data
         update_data = await request.json()
+        update_id = update_data.get("update_id", "unknown")
+        logger.debug(f"Received webhook update {update_id}")
 
         # Process update with aiogram
         from aiogram.types import Update
@@ -195,10 +220,11 @@ async def telegram_webhook(request: Request):
 
         # Handle the update
         await app.state.dp.feed_update(bot=app.state.bot, update=update)
+        logger.debug(f"Processed webhook update {update_id}")
         return {"status": "ok"}
 
     except Exception as e:
-        logger.error(f"❌ Webhook error: {e}")
+        logger.error(f"❌ Webhook error: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
 
 
