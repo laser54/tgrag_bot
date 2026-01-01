@@ -19,6 +19,18 @@ class Settings(BaseSettings):
     qdrant_collection: str = Field("tgrag-bot", env="QDRANT_COLLECTION")
     use_local_qdrant: bool = Field(False, env="USE_LOCAL_QDRANT")
 
+    # OpenAI / LLM settings
+    openai_api_key: str | None = Field(None, env="OPENAI_API_KEY")
+    openai_base_url: str | None = Field(
+        None, env="OPENAI_BASE_URL"
+    )  # For compatible APIs
+    embedding_model: str = Field("text-embedding-3-large", env="EMBEDDING_MODEL")
+    llm_model: str = Field("gpt-5.1-mini", env="LLM_MODEL")
+
+    # Document storage
+    upload_dir: str = Field("data/uploads", env="UPLOAD_DIR")
+    max_file_size_mb: int = Field(10, env="MAX_FILE_SIZE_MB")
+
     class Config:
         """Pydantic configuration."""
 

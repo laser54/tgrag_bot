@@ -64,7 +64,9 @@ class QdrantSettingsUpdate(BaseModel):
         return normalized
 
 
-def _serialize_response(config: QdrantConfig, status_payload: dict) -> QdrantSettingsResponse:
+def _serialize_response(
+    config: QdrantConfig, status_payload: dict
+) -> QdrantSettingsResponse:
     """Convert config + status to a response model."""
     return QdrantSettingsResponse(
         mode=config.mode.value,  # type: ignore[arg-type]
@@ -112,7 +114,9 @@ async def update_qdrant_settings(payload: QdrantSettingsUpdate):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cloud mode requires both url and api_key.",
             )
-        updated = QdrantConfig(mode=mode, url=url, api_key=api_key, collection=collection)
+        updated = QdrantConfig(
+            mode=mode, url=url, api_key=api_key, collection=collection
+        )
     else:  # pragma: no cover - exhaustiveness guard
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported mode: {mode}"
@@ -121,4 +125,3 @@ async def update_qdrant_settings(payload: QdrantSettingsUpdate):
     qdrant_config_store.set(updated)
     status_payload = (await get_qdrant_status(qdrant_config_store)).to_dict()
     return _serialize_response(updated, status_payload)
-

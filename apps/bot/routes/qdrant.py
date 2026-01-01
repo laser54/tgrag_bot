@@ -13,4 +13,3 @@ async def qdrant_status():
     """Return the current Qdrant connectivity state."""
     payload = await get_qdrant_status(qdrant_config_store)
     return payload.to_dict()
-

@@ -5,12 +5,14 @@ from __future__ import annotations
 import logging
 import math
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict
 
 from ..documents import DocumentRecord, document_store
 from ..qdrant import qdrant_config_store
+from ..settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +59,32 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentResponse:
     """Accept a document upload and store metadata only."""
     payload = await file.read()
     size = len(payload)
+
+    # Validation
+    max_size_bytes = settings.max_file_size_mb * 1024 * 1024
+    if size > max_size_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Max size is {settings.max_file_size_mb}MB.",
+        )
+
     record = document_store.add_document(file.filename, size)
-    logger.info("Queued document %s (%s bytes)", record.name, record.size)
+
+    # Save file to disk
+    try:
+        upload_dir = Path(settings.upload_dir)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        file_path = upload_dir / f"{record.id}_{file.filename}"
+        file_path.write_bytes(payload)
+        logger.info("Saved document %s to %s (%s bytes)", record.name, file_path, size)
+    except Exception as e:
+        logger.error(f"Failed to save file: {e}")
+        # Rollback metadata
+        document_store.delete_document(record.id)
+        raise HTTPException(
+            status_code=500, detail="Failed to save file to disk."
+        ) from e
+
     return _serialize(record)
 
 
@@ -110,6 +136,16 @@ async def delete_document(document_id: str) -> DocumentResponse:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
         )
+
+    # Delete file from disk
+    try:
+        upload_dir = Path(settings.upload_dir)
+        file_path = upload_dir / f"{record.id}_{record.name}"
+        if file_path.exists():
+            file_path.unlink()
+            logger.info("Deleted file %s", file_path)
+    except Exception as e:
+        logger.warning(f"Failed to delete file {record.id}: {e}")
+
     logger.info("Deleted document %s", record.name)
     return _serialize(record)
-

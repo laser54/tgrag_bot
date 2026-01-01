@@ -22,4 +22,3 @@ def build_qdrant_client(config: QdrantConfig) -> QdrantClient | None:
         return QdrantClient(url=config.url, api_key=config.api_key)
 
     return None
-

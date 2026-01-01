@@ -17,4 +17,3 @@ __all__ = [
     "build_initial_config",
     "qdrant_config_store",
 ]
-

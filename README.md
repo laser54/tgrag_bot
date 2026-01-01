@@ -234,15 +234,19 @@ tgrag-bot/
 | `ALLOWED_USER_IDS` | Comma-separated user IDs for access control | ❌ | All users |
 | `PORT` | Server port | ❌ | `8080` |
 | `WEBAPP_URL` | Mini App URL | ❌ | `http://localhost:8080/webapp/` |
-| `QDRANT_URL` | Managed Qdrant Cloud endpoint (optional, can be set later via Mini App) | ❌ | - |
-| `QDRANT_API_KEY` | API key for Qdrant Cloud (write-only, usually entered via Mini App) | ❌ | - |
+| `QDRANT_URL` | Managed Qdrant Cloud endpoint (can be set later via Mini App) | ❌ | - |
+| `QDRANT_API_KEY` | API key for Qdrant Cloud | ❌ | - |
 | `QDRANT_COLLECTION` | Default Qdrant collection | ❌ | `tgrag-bot` |
 | `USE_LOCAL_QDRANT` | `true` to run bundled qdrant service | ❌ | `false` |
-| `OPENAI_API_KEY` | API key for OpenAI/OpenAI-compatible provider (planned) | ❌ | - |
-| `OPENAI_EMBEDDING_MODEL` | Embedding model name (e.g. `text-embedding-3-small`) | ❌ | `text-embedding-3-small` |
-| `OPENAI_LLM_MODEL` | Chat/answering model (e.g. `gpt-4o-mini`) | ❌ | `gpt-4o-mini` |
+| `OPENAI_API_KEY` | API key for OpenAI/OpenAI-compatible provider | ❌ | - |
+| `OPENAI_BASE_URL` | Base URL for OpenAI-compatible APIs (Azure, Ollama, etc.) | ❌ | - |
+| `EMBEDDING_MODEL` | Embedding model name | ❌ | `text-embedding-3-large` |
+| `LLM_MODEL` | Chat/answering model | ❌ | `gpt-5.1-mini` |
+| `UPLOAD_DIR` | Directory for uploaded documents | ❌ | `data/uploads` |
+| `MAX_FILE_SIZE_MB` | Maximum file upload size in MB | ❌ | `10` |
 
-> `QDRANT_*` vars are optional because the default workflow is to paste credentials into the Mini App (or call `/api/settings/qdrant`) after the bot is already running. `OPENAI_*` entries are placeholders for the upcoming embedding + answer pipeline that will call OpenAI-compatible endpoints.
+> **Note on models (Jan 2026):** GPT-4o is deprecated (sunset Feb 2026). Default LLM is now `gpt-5.1-mini`. For embeddings, `text-embedding-3-large` provides best quality. `QDRANT_*` and `OPENAI_*` vars are optional — configure via Mini App after deployment.
+
 
 ### Docker Services
 

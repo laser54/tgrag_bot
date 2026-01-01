@@ -108,4 +108,3 @@ def build_initial_config(app_settings: Settings) -> QdrantConfig:
         api_key=None,
         collection=collection,
     )
-

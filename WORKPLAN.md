@@ -167,37 +167,89 @@ tgrag-bot/
 - [ ] Support filters (document IDs/tags) and pagination to keep the API future-proof.
 - [ ] Document response schema for downstream chat/answering endpoint integration.
 
-### T10 - LlamaIndex RAG Integration 🚧 PLANNED (~2 days)
+### T10 - LlamaIndex RAG Integration 🚧 PLANNED (~3 days)
 **Goal:** Integrate LlamaIndex as the core RAG framework, leveraging Qdrant for vector storage. Replace manual chunking/embeddings with LlamaIndex's high-level APIs for document ingestion, indexing, and retrieval.
 
+**Architecture:**
+```
+apps/bot/rag/
+├── __init__.py          # Lazy singleton RAGService
+├── service.py           # RAGService: init, query, index, delete
+├── indexer.py           # DocumentIndexer with LlamaIndex
+├── retriever.py         # QueryEngine wrapper with filters
+└── models.py            # Pydantic schemas for RAG responses
+```
+
+**Models (as of Jan 2026):**
+- Embedding: `text-embedding-3-large` (OpenAI)
+- LLM: `gpt-5.1-mini` (replaces deprecated gpt-4o, sunset Feb 2026)
+- Alternative: Ollama for local inference
+
+#### T10.0 - Foundation & File Persistence (0.5 day) ⭐ NEW
+- [x] Add OpenAI/LLM settings to `settings.py`: `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `EMBEDDING_MODEL`, `LLM_MODEL`
+- [x] Add document storage settings: `UPLOAD_DIR`, `MAX_FILE_SIZE_MB`
+- [x] Update `.env.example` with new variables
+- [x] Implement file persistence in `/api/documents` upload: save to `data/uploads/{doc_id}_{filename}`
+- [x] Add SQLite or JSON file for document metadata persistence (survives container restart)
+- [x] **TEST:** Upload file → restart container → file and metadata still exist
+
+
 #### T10.1 - LlamaIndex Setup & Dependencies (0.5 day)
-- [ ] Add LlamaIndex core, vector-stores-qdrant, embeddings-openai to pyproject.toml.
+- [x] Add LlamaIndex core, vector-stores-qdrant, embeddings-openai to pyproject.toml.
 - [ ] Update Docker build to include new deps (ensure compatibility with existing Qdrant client).
-- [ ] Create `apps/bot/rag/` module with LlamaIndex service classes: `DocumentIndexer`, `QueryEngine`.
+- [ ] Create `apps/bot/rag/` module structure with lazy initialization pattern.
+- [ ] Implement `RAGService` singleton with connection reuse and health checks.
 - [ ] Initialize LlamaIndex with Qdrant vector store, using existing config from `qdrant/config_store.py`.
+- [ ] Add graceful degradation when OpenAI API key is missing (return helpful error, not crash).
 - [ ] **TEST:** Basic LlamaIndex + Qdrant connection works, can create empty index.
 
 #### T10.2 - Document Ingestion with LlamaIndex (0.75 day)
 - [ ] Replace manual chunking in T8 with LlamaIndex `SimpleDirectoryReader` + `SentenceSplitter` for supported formats (PDF, DOCX, TXT, Markdown).
 - [ ] Implement `DocumentIndexer.add_document(file_path, metadata)` using LlamaIndex's `VectorStoreIndex.from_documents()` with Qdrant as backend.
-- [ ] Update `/api/documents` index endpoint to call LlamaIndex ingestion, track chunk counts, and store metadata.
-- [ ] Handle reindexing: remove old nodes by metadata filter, re-add with updated content.
-- [ ] Add error handling for unsupported formats or embedding failures.
-- [ ] **TEST:** Upload document → index → verify vectors in Qdrant collection.
+- [ ] Update `/api/documents/{id}/index` endpoint to:
+  - Call LlamaIndex ingestion with real embeddings
+  - Track actual chunk counts from LlamaIndex
+  - Store node IDs for later deletion
+- [ ] Handle reindexing: remove old nodes by `doc_id` metadata filter, re-add with updated content.
+- [ ] Add error handling for unsupported formats or embedding failures (return 400 with details).
+- [ ] Implement background indexing with status polling (optional, for large files).
+- [ ] **TEST:** Upload document → index → verify vectors in Qdrant collection with correct metadata.
 
 #### T10.3 - Semantic Search with LlamaIndex Query Engine (0.5 day)
-- [ ] Update `/api/search` to use LlamaIndex `RetrieverQueryEngine` with similarity search over Qdrant.
+- [ ] Update `/api/search` to use LlamaIndex `VectorIndexRetriever` with similarity search over Qdrant.
 - [ ] Support filters: document IDs via metadata, pagination (limit/offset).
-- [ ] Return structured response: chunks with scores, source document metadata.
+- [ ] Return structured response: chunks with scores, source document metadata, highlighted snippets.
 - [ ] Integrate with existing Qdrant config checks (reachable, collection exists).
-- [ ] **TEST:** Search query returns relevant chunks from indexed documents.
+- [ ] Add embedding caching for repeated queries (optional).
+- [ ] **TEST:** Search query returns relevant chunks from indexed documents with correct scores.
 
-#### T10.4 - Chat/Answer Endpoint (0.25 day)
+#### T10.4 - Chat/Answer Endpoint (0.5 day)
 - [ ] Add `/api/chat` POST endpoint for RAG-powered Q&A.
-- [ ] Use LlamaIndex `ConversationalRetrievalChain` or query engine with chat history.
-- [ ] Accept query + optional document filters, return answer + sources.
-- [ ] Wire to Telegram bot handlers for user questions.
+- [ ] Use LlamaIndex `QueryEngine` with response synthesis.
+- [ ] Accept: `query`, optional `document_ids` filter, optional `conversation_id` for context.
+- [ ] Return: `answer`, `sources[]` with document names and page references.
+- [ ] Add streaming response option (`/api/chat/stream`) for long answers.
 - [ ] **TEST:** Ask question via API, get answer citing indexed docs.
+
+#### T10.5 - Telegram Bot Integration (0.5 day) ⭐ NEW
+- [ ] Refactor `tg/handlers.py` to use `RAGService` for incoming messages.
+- [ ] Check RAG readiness (OpenAI + Qdrant configured) before processing.
+- [ ] If not ready: reply with setup instructions and Mini App link.
+- [ ] If ready: query RAG and return answer with source citations.
+- [ ] Add typing indicator while processing (show "bot is typing...").
+- [ ] Handle errors gracefully: timeout, API errors, empty results.
+- [ ] Support `/ask <question>` command as explicit RAG query.
+- [ ] **TEST:** Send message to bot → get RAG-powered response with sources.
+
+#### T10.6 - Performance & Reliability (0.25 day) ⭐ NEW
+- [ ] Use `AsyncQdrantClient` for non-blocking vector operations.
+- [ ] Add connection pooling for OpenAI API (httpx limits).
+- [ ] Implement retry with exponential backoff for embedding requests.
+- [ ] Add request timeout configuration (default 30s for embeddings, 60s for LLM).
+- [ ] Log latency metrics for indexing and query operations.
+- [ ] **TEST:** Concurrent requests don't cause connection errors.
+
+
 
 ## Definition of Done
 - [ ] **Local webhook development:** Bot receives messages via cloudflared HTTPS tunnel

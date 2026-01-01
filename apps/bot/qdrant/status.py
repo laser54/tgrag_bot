@@ -73,4 +73,3 @@ async def get_qdrant_status(store: QdrantConfigStore) -> QdrantStatusPayload:
         payload.last_error = str(exc)
 
     return payload
-

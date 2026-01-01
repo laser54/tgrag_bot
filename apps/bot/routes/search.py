@@ -65,7 +65,7 @@ async def semantic_search(payload: SearchRequest) -> SearchResponse:
     for idx, record in enumerate(limited):
         score = round(max(0.1, 0.92 - idx * 0.08), 3)
         snippet = (
-            f"Excerpt from {record.name} referencing \"{payload.query[:64]}\". "
+            f'Excerpt from {record.name} referencing "{payload.query[:64]}". '
             "Real content will be returned once embeddings are wired."
         )
         results.append(
@@ -79,4 +79,3 @@ async def semantic_search(payload: SearchRequest) -> SearchResponse:
         )
 
     return SearchResponse(query=payload.query, results=results)
-
