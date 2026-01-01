@@ -158,6 +158,16 @@ async def lifespan(app: FastAPI):
         except Exception as exc:
             logger.warning(f"Could not set chat menu button: {exc}")
 
+    # Final ready message
+    if app.state.bot and webhook_url:
+        logger.info("🎯 Bot is fully operational and ready to receive messages")
+    elif app.state.bot:
+        logger.warning(
+            "⚠️ Bot initialized but webhook not configured - manual polling required"
+        )
+    else:
+        logger.info("🧪 Running in demo mode - Telegram functionality disabled")
+
     yield
 
     # Shutdown
