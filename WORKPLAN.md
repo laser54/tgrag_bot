@@ -52,7 +52,7 @@ tgrag-bot/
 - [x] Add .editorconfig
 - [x] Add ruff.toml (reasonable defaults) - moved to pyproject.toml
 - [x] Add .pre-commit-config.yaml (ruff + trailing-whitespace + end-of-file-fixer)
-- [x] Initialize Poetry/venv with dependencies (FastAPI, aiogram, pydantic-settings, etc.)
+- [x] Initialize uv/venv with dependencies (FastAPI, aiogram, pydantic-settings, etc.)
 - [x] Create .env.example with required vars + webhook vars
 - [x] Add professional README with badges and comprehensive docs
 - [x] **TEST:** Install pre-commit hooks and run ✅ PASSED
@@ -274,7 +274,7 @@ apps/bot/rag/
 ```bash
 # Setup
 pre-commit install || true
-pip install -r requirements.txt  # fallback if poetry fails
+uv sync  # install dependencies (recommended)
 
 # Development & Production commands:
 

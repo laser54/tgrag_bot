@@ -109,9 +109,19 @@ cp .env.example .env
 
 #### 3. Run with Docker Compose
 ```bash
-python run.py          # remote Qdrant Cloud (default)
-# or
-USE_LOCAL_QDRANT=1 python run.py  # start Docker profile with bundled Qdrant
+# 1. Local development with cloudflared (automatic HTTPS)
+export TELEGRAM_BOT_TOKEN=your_token
+# You can skip QDRANT_* vars on the very first launch
+uv run run.py  # automatically starts cloudflared and configures webhooks
+
+# 2. Production on VPS with domain
+# Deploy to clean Ubuntu server with domain attached:
+bash deploy/ubuntu-setup.sh yourdomain.com
+# That's it! Bot will be running with HTTPS
+
+# Local Qdrant profile (optional)
+USE_LOCAL_QDRANT=1 uv run run.py
+docker compose --profile local-qdrant up --build
 ```
 
 **What happens automatically:**
@@ -276,7 +286,7 @@ tgrag-bot/
 ## 📈 Roadmap
 
 ### Phase 1: Core Infrastructure ✅ COMPLETED
-- [x] **Project scaffolding** - Poetry, ruff, pre-commit, professional README
+- [x] **Project scaffolding** - uv, ruff, pre-commit, professional README
 - [x] **FastAPI backend** - health checks, CORS, logging, static file serving
 - [x] **Environment management** - Pydantic settings, webhook configuration
 - [x] **Development tooling** - run.py script, proper Python path handling
@@ -327,10 +337,10 @@ git checkout -b feature/amazing-feature
 ```
 
 ### Code Quality
-- **Linting**: `ruff check .`
-- **Formatting**: `ruff format .`
-- **Type checking**: `mypy .` (future)
-- **Tests**: `pytest` (future)
+- **Linting**: `uv run ruff check .`
+- **Formatting**: `uv run ruff format .`
+- **Type checking**: `uv run mypy .` (future)
+- **Tests**: `uv run pytest` (future)
 
 ## 📄 License
 
