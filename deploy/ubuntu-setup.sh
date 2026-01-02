@@ -211,8 +211,14 @@ cleanup_generated_files() {
   for rel_path in "${generated[@]}"; do
     local full_path="${repo}/${rel_path}"
     if [[ -f "${full_path}" ]]; then
-      if ! git -C "${repo}" ls-files --error-unmatch "${rel_path}" >/dev/null 2>&1; then
-        log INFO "Removing generated file ${rel_path} before syncing repository."
+      # Check if file is tracked by git
+      if git -C "${repo}" ls-files --error-unmatch "${rel_path}" >/dev/null 2>&1; then
+        # File is tracked - reset it to HEAD to discard local changes
+        log INFO "Resetting tracked file ${rel_path} to discard local changes."
+        git -C "${repo}" checkout HEAD -- "${rel_path}" >/dev/null 2>&1 || true
+      else
+        # File is not tracked - remove it
+        log INFO "Removing untracked generated file ${rel_path} before syncing repository."
         rm -f "${full_path}"
       fi
     fi
