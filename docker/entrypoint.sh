@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env sh
 set -e
 
-if [ "${USE_CLOUDFLARED:-false}" = "true" ]; then
+if [ "${USE_PINGGY:-false}" = "true" ]; then
     python bin/get_webhook_url.py
 fi
 

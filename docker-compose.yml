@@ -1,13 +1,27 @@
 services:
-  # Cloudflared tunnel for HTTPS webhook
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --url http://bot:8080 --logfile /app/data/cloudflared.log --no-autoupdate --protocol quic --transport-loglevel error
+  # Pinggy SSH tunnel for HTTPS webhook
+  pinggy:
+    image: alpine:3.19
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        apk add --no-cache openssh-client > /dev/null 2>&1 &&
+        PINGGY_HOST=$${PINGGY_TOKEN:+$$PINGGY_TOKEN@a.pinggy.io} &&
+        PINGGY_HOST=$${PINGGY_HOST:-free.pinggy.io} &&
+        echo "🚀 Connecting to Pinggy ($$PINGGY_HOST)..." &&
+        ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 \
+            -p 443 -R0:bot:8080 \
+            $$PINGGY_HOST 2>&1 | tee /app/data/pinggy.log
+    environment:
+      - PINGGY_TOKEN=${PINGGY_TOKEN:-}
     networks:
       - tgrag-network
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    tty: true
+    stdin_open: true
 
   # Main FastAPI application
   bot:
@@ -23,14 +37,14 @@ services:
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       - QDRANT_COLLECTION=${QDRANT_COLLECTION:-tgrag-bot}
       - USE_LOCAL_QDRANT=${USE_LOCAL_QDRANT:-false}
-      - USE_CLOUDFLARED=true
+      - USE_PINGGY=true
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
     networks:
       - tgrag-network
     depends_on:
-      - cloudflared
+      - pinggy
     restart: unless-stopped
 
   # Qdrant vector database

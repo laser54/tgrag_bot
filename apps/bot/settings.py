@@ -67,7 +67,7 @@ class Settings(BaseSettings):
             base_url = self.webhook_url.replace("/webhook/telegram", "")
             return base_url
         # Fallback for development
-        return "https://example.trycloudflare.com"
+        return "https://example.free.pinggy.link"
 
     @property
     def webapp_url_full(self) -> str:

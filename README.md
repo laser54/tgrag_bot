@@ -50,7 +50,7 @@
 - ![Docker](https://img.shields.io/badge/Docker-20.10+-2496ED?style=flat&logo=docker) & Docker Compose
 - ![Telegram](https://img.shields.io/badge/Telegram-Bot_Token-26A5E4?style=flat&logo=telegram) from [@BotFather](https://t.me/botfather)
 
-### 🐳 Local Docker (cloudflared tunnel)
+### 🐳 Local Docker (Pinggy SSH tunnel)
 
 ```bash
 # Clone repository
@@ -60,8 +60,9 @@ cd tgrag-bot
 # Configure environment
 cp .env.example .env
 # Add your TELEGRAM_BOT_TOKEN to .env
+# (Optional) Add PINGGY_TOKEN for persistent URL
 
-# Run local stack (bot + cloudflared, remote Qdrant optional)
+# Run local stack (bot + Pinggy tunnel, remote Qdrant optional)
 docker compose up --build
 ```
 
@@ -92,7 +93,7 @@ What the script does:
 - Builds & starts Traefik + bot + Qdrant via `docker-compose.prod.yml`
 - Waits for bot health with progress output, registers Telegram webhook, installs systemd unit
 
-### 🏠 Local Development (cloudflared)
+### 🏠 Local Development (Pinggy)
 
 #### 1. Get Telegram Bot Token
 1. Go to [@BotFather](https://t.me/botfather) on Telegram
@@ -104,15 +105,16 @@ What the script does:
 # Configure environment
 cp .env.example .env
 # Edit .env and add: TELEGRAM_BOT_TOKEN=your_token_here
+# (Optional) Add PINGGY_TOKEN for persistent tunnel URL (https://pinggy.io)
 # (Optional) Add QDRANT_URL / QDRANT_API_KEY later, after you create a Qdrant Cloud project
 ```
 
 #### 3. Run with Docker Compose
 ```bash
-# 1. Local development with cloudflared (automatic HTTPS)
+# 1. Local development with Pinggy tunnel (automatic HTTPS)
 export TELEGRAM_BOT_TOKEN=your_token
 # You can skip QDRANT_* vars on the very first launch
-uv run run.py  # automatically starts cloudflared and configures webhooks
+uv run run.py  # automatically starts Pinggy tunnel and configures webhooks
 
 # 2. Production on VPS with domain
 # Deploy to clean Ubuntu server with domain attached:
@@ -125,10 +127,10 @@ docker compose --profile local-qdrant up --build
 ```
 
 **What happens automatically:**
-- Docker Compose starts all services including cloudflared tunnel
-- cloudflared creates temporary HTTPS domain like `https://abc123.trycloudflare.com`
-- Bot automatically reads the tunnel URL from cloudflared logs
-- Registers webhook: `https://abc123.trycloudflare.com/webhook/telegram`
+- Docker Compose starts all services including Pinggy SSH tunnel
+- Pinggy creates temporary HTTPS domain like `https://xxxxx.free.pinggy.link`
+- Bot automatically reads the tunnel URL from Pinggy logs
+- Registers webhook: `https://xxxxx.free.pinggy.link/webhook/telegram`
 - Bot becomes available for testing via webhooks
 - Vector Store panel inside the Mini App stays in `Not configured` mode until you paste Qdrant Cloud credentials (URL + API key) post-install.
 
@@ -161,8 +163,8 @@ Returns `{"status": "ok"}` if the service is running.
 # Bot logs
 docker compose logs bot
 
-# Cloudflared logs
-docker compose logs cloudflared
+# Pinggy tunnel logs
+docker compose logs pinggy
 
 # All logs
 docker compose logs
@@ -177,8 +179,8 @@ docker compose logs
 4. **Check Telegram**: Send `/start` to bot and watch webhook logs for incoming requests
 
 #### 🌐 Webhook Issues
-- **URL mismatch**: Ensure webhook URL matches cloudflared tunnel URL
-- **Network issues**: Check cloudflared connection status
+- **URL mismatch**: Ensure webhook URL matches Pinggy tunnel URL
+- **Network issues**: Check Pinggy connection status (`docker compose logs pinggy`)
 - **Telegram API**: Webhook may take time to propagate (up to 1 minute)
 
 #### 📝 Debug Commands
@@ -248,6 +250,7 @@ tgrag-bot/
 | `QDRANT_API_KEY` | API key for Qdrant Cloud | ❌ | - |
 | `QDRANT_COLLECTION` | Default Qdrant collection | ❌ | `tgrag-bot` |
 | `USE_LOCAL_QDRANT` | `true` to run bundled qdrant service | ❌ | `false` |
+| `PINGGY_TOKEN` | Token from [pinggy.io](https://pinggy.io) for persistent tunnel URL | ❌ | - |
 | `OPENAI_API_KEY` | API key for OpenAI/OpenAI-compatible provider | ❌ | - |
 | `OPENAI_BASE_URL` | Base URL for OpenAI-compatible APIs (Azure, Ollama, etc.) | ❌ | - |
 | `EMBEDDING_MODEL` | Embedding model name | ❌ | `text-embedding-3-large` |
@@ -260,7 +263,8 @@ tgrag-bot/
 
 ### Docker Services
 
-- **bot**: FastAPI application with aiogram polling
+- **bot**: FastAPI application with aiogram webhooks
+- **pinggy**: SSH tunnel for HTTPS webhook URL (local dev only)
 - **qdrant**: Vector database (enabled only with `local-qdrant` profile)
 - **ollama**: Local LLM server (optional, commented out)
 
@@ -295,7 +299,7 @@ tgrag-bot/
 ### Phase 2: Telegram Bot & Webhooks ✅ COMPLETED
 - [x] **Webhook endpoint** - POST /webhook/telegram powered by aiogram
 - [x] **Bot commands** - /start and /menu with WebApp button
-- [x] **Local development** - cloudflared tunnel for webhook testing
+- [x] **Local development** - Pinggy SSH tunnel for webhook testing
 - [x] **Ubuntu deployment** - Traefik-based automated Docker script
 
 ### Phase 3: RAG Implementation 📋
