@@ -10,10 +10,10 @@
 > 🚀 **One-command deploy** of a Telegram bot with RAG (Retrieval-Augmented Generation) memory. Users can upload files, index them, and ask intelligent questions powered by vector search.
 
 ## ✅ Current Status
-- **Phase 1: Core Infrastructure** ✅ **COMPLETED**
-- **Phase 2: Telegram Bot & Webhooks** ✅ **COMPLETED** (webhook flow, commands, deploy scripts)
-- **Ready for:** Local development, webhook testing, Ubuntu deployment
-- **Tech Stack:** FastAPI + aiogram v3 + Qdrant + Docker
+- **Current Runtime:** Single-bot FastAPI + aiogram webhook (`/webhook/telegram`) is running and stable.
+- **What is Implemented:** Telegram commands, Mini App integration, Qdrant runtime settings/status, document/search API stubs.
+- **What is Missing for Swarm:** Multi-bot registry, dynamic token webhooks, SQLite bot/document state, LangGraph router, strict multi-tenant retrieval.
+- **Target Direction:** Evolve into a self-hosted "Personal Bot Swarm" with one backend controlling many Telegram managed bots.
 
 ## ✨ Features
 
@@ -289,39 +289,49 @@ tgrag-bot/
 
 ## 📈 Roadmap
 
-### Phase 1: Core Infrastructure ✅ COMPLETED
-- [x] **Project scaffolding** - uv, ruff, pre-commit, professional README
-- [x] **FastAPI backend** - health checks, CORS, logging, static file serving
-- [x] **Environment management** - Pydantic settings, webhook configuration
-- [x] **Development tooling** - run.py script, proper Python path handling
-- [x] **Webhook preparation** - infrastructure ready for Telegram webhooks
+### Phase 0: Baseline (already in repo)
+- [x] Single webhook flow (`POST /webhook/telegram`) with aiogram v3.
+- [x] Core API surface for documents/search/settings and Qdrant health/runtime config.
+- [x] Dockerized local/dev/prod bootstrap.
 
-### Phase 2: Telegram Bot & Webhooks ✅ COMPLETED
-- [x] **Webhook endpoint** - POST /webhook/telegram powered by aiogram
-- [x] **Bot commands** - /start and /menu with WebApp button
-- [x] **Local development** - Pinggy SSH tunnel for webhook testing
-- [x] **Ubuntu deployment** - Traefik-based automated Docker script
+### Phase 1: SQLite Data Layer (foundation)
+- [ ] Add async SQLAlchemy + Alembic for SQLite.
+- [ ] Create `bots` table: `id`, `token`, `owner_id`, `name`, `bot_type`, `created_at`.
+- [ ] Create `documents` table: `id`, `bot_id`, `filename`, `status`, `created_at`.
+- [ ] Introduce repositories + transaction-safe CRUD.
+- [ ] Run temporary dual-write migration from JSON document store to SQLite.
 
-### Phase 3: RAG Implementation 📋
-- [ ] **File upload API** - validation and processing pipeline
-- [ ] **Document processing** - PDF, DOCX, TXT format support
-- [ ] **Vector embeddings** - integration with Ollama or OpenAI
-- [ ] **Semantic search** - Qdrant-powered similarity search
-- [ ] **Contextual Q&A** - citations and source references
+### Phase 2: Admin Bot for Managed Bot Provisioning
+- [ ] Add `KeyboardButtonRequestManagedBot` to admin menu.
+- [ ] Handle `managed_bot_created` events.
+- [ ] Fetch managed bot token (`get_managed_bot_token`) and persist to `bots`.
+- [ ] Auto-register webhook to `/webhook/telegram/{bot_token}`.
+- [ ] Enforce strict admin access by `ALLOWED_USER_IDS`.
 
-### Phase 4: Advanced Features 🚀
-- [ ] **Multi-format support** - images, audio, video processing
-- [ ] **Conversation memory** - chat history and context retention
-- [ ] **User management** - admin panel and access controls
-- [ ] **Analytics dashboard** - usage metrics and insights
-- [ ] **Multi-language** - internationalization support
+### Phase 3: Dynamic Webhooks and Routing
+- [ ] Add dynamic endpoint `POST /webhook/telegram/{bot_token}`.
+- [ ] Resolve bot by token from SQLite and reject unknown tokens.
+- [ ] Add lazy `BotRegistry` cache for `aiogram.Bot` instances.
+- [ ] Keep legacy `/webhook/telegram` temporarily as migration fallback.
 
-### Phase 5: Production Polish 🎯
-- [ ] **Error handling** - comprehensive exception management
-- [ ] **Security hardening** - rate limiting, input validation
-- [ ] **Monitoring & logging** - centralized observability
-- [ ] **CI/CD pipeline** - automated testing and deployment
-- [ ] **Performance optimization** - caching, async processing
+### Phase 4: Agent Factory (LangGraph)
+- [ ] Add `apps/bot/agents/` package with typed graph interfaces.
+- [ ] Create separate graphs for `rag`, `researcher`, and `mentor`.
+- [ ] Add router that dispatches by `bot_type` from DB.
+- [ ] Cache compiled LangGraph objects per bot type for low latency.
+
+### Phase 5: LlamaIndex + Multi-tenant Qdrant
+- [ ] Implement async ingestion pipeline (parse -> chunk -> embed -> upsert).
+- [ ] Attach `bot_id` metadata to every vector payload.
+- [ ] Enforce mandatory Qdrant filter `bot_id == current_bot_id` in retrieval.
+- [ ] Replace search/index stubs with real retrieval and indexing flows.
+- [ ] Update document status lifecycle: `queued -> processing -> ready/failed`.
+
+### Phase 6: Reliability and Rollout
+- [ ] Add feature flags: `ENABLE_MULTI_BOT`, `ENABLE_LANGGRAPH_ROUTER`, `ENABLE_QDRANT_MULTI_TENANT`.
+- [ ] Add integration tests for dynamic webhook routing and tenant isolation.
+- [ ] Add structured logs with `bot_id`, `update_id`, `request_id`.
+- [ ] Remove legacy JSON/document and static webhook paths after stable rollout.
 
 ## 🤝 Contributing
 
