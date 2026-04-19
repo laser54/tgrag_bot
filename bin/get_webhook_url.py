@@ -5,10 +5,17 @@ import os
 import re
 import time
 
-# Pinggy outputs URLs like:
-#   https://abcdef-12-34-56-78.free.pinggy.link
+# Pinggy tunnel URLs look like:
+#   https://abcdef-12-34-56-78.free.pinggy.link  (free tier)
+#   https://abcdef-12-34-56-78.a.free.pinggy.link  (free tier, newer format)
 #   https://abcdef.a.pinggy.online  (with token)
-PINGGY_URL_PATTERN = re.compile(r"https://[a-zA-Z0-9._-]+\.pinggy\.\w+")
+# IMPORTANT: Explicitly exclude dashboard.pinggy.io — Pinggy spams its log with
+# "Upgrade at https://dashboard.pinggy.io" ads, and a broad regex will pick that
+# up as the "tunnel URL", causing the bot to register a bogus webhook.
+PINGGY_URL_PATTERN = re.compile(
+    r"https://[a-zA-Z0-9][a-zA-Z0-9.-]*\."
+    r"(?:pinggy\.link|pinggy\.online|pinggy-free\.link)\b"
+)
 
 
 def get_pinggy_url_from_log(log_file="/app/data/pinggy.log"):

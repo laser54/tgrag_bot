@@ -281,3 +281,8 @@ Thumbs.db
 data/webhook_url.txt
 data/webapp_url.txt
 data/cloudflared.log
+data/pinggy.log
+data/app.db
+data/app.db-journal
+data/app.db-shm
+data/app.db-wal

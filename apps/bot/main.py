@@ -2,8 +2,10 @@
 
 import asyncio
 import logging
+import socket
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlparse
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import MenuButtonWebApp, WebAppInfo
@@ -29,6 +31,84 @@ logging.basicConfig(level=logging.INFO)
 logger.add(
     "logs/bot.log", rotation="10 MB", retention="1 week", level="INFO", encoding="utf-8"
 )
+
+
+async def _resolve_dns(host: str, timeout: float = 3.0) -> str | None:
+    """Try to resolve `host` via the default resolver. Returns IP or None."""
+    loop = asyncio.get_running_loop()
+    try:
+        infos = await asyncio.wait_for(
+            loop.getaddrinfo(host, 443, type=socket.SOCK_STREAM), timeout=timeout
+        )
+        return infos[0][4][0] if infos else None
+    except Exception:
+        return None
+
+
+async def _setup_webhook_with_backoff(bot: Bot, webhook_url: str) -> bool:
+    """Robust webhook registration for flaky tunnels (Pinggy free, first-launch
+    Cloudflared, etc.).
+
+    - Waits for public DNS to resolve the tunnel host (up to ~5 min).
+    - Exponential backoff on `setWebhook` errors.
+    - Does NOT drop pending updates (so user's /start presses survive).
+    - Emits actionable diagnostics on final failure.
+    """
+    host = urlparse(webhook_url).hostname or ""
+    logger.info(f"⚙️ Setting webhook → {webhook_url}")
+
+    dns_deadline = 120  # seconds to wait for DNS propagation
+    dns_waited = 0
+    while dns_waited < dns_deadline:
+        ip = await _resolve_dns(host)
+        if ip is not None:
+            logger.info(f"🌐 DNS OK: {host} -> {ip}")
+            break
+        logger.warning(
+            f"🟡 DNS not resolving yet for {host} (waited {dns_waited}s) — "
+            "waiting for tunnel propagation"
+        )
+        await asyncio.sleep(5)
+        dns_waited += 5
+    else:
+        logger.error(
+            f"❌ DNS never resolved for {host} after {dns_deadline}s. "
+            "Pinggy free occasionally allocates subdomains that don't "
+            "propagate to public DNS — Telegram will also fail to reach it. "
+            "Fix: `docker compose restart pinggy bot` to get a fresh URL, or "
+            "add PINGGY_TOKEN to .env for a stable *.a.pinggy.online host. "
+            "Bot stays up; once the tunnel is reachable, call "
+            "POST /admin/webhook/refresh to re-register without restart."
+        )
+        return False
+
+    delays = [2, 4, 8, 16, 30, 60, 60, 60]  # ~4 min of retries
+    for attempt, delay in enumerate(delays, start=1):
+        try:
+            await bot.set_webhook(
+                url=webhook_url,
+                drop_pending_updates=False,
+                allowed_updates=["message", "callback_query", "edited_message"],
+            )
+            info = await bot.get_webhook_info()
+            if info.url == webhook_url:
+                logger.info(f"✅ Webhook verified: {info.url}")
+                return True
+            logger.warning(
+                f"⚠️ Webhook URL mismatch. expected={webhook_url} got={info.url!r}"
+            )
+        except Exception as exc:
+            logger.error(f"❌ setWebhook attempt {attempt}/{len(delays)} failed: {exc}")
+
+        if attempt < len(delays):
+            logger.info(f"Retrying in {delay}s...")
+            await asyncio.sleep(delay)
+
+    logger.error(
+        "Webhook setup exhausted all retries. Bot will keep running; "
+        "POST /admin/webhook/refresh once the tunnel is reachable."
+    )
+    return False
 
 
 @asynccontextmanager
@@ -100,45 +180,7 @@ async def lifespan(app: FastAPI):
         app.state.webapp_url = webapp_url_full
 
     if app.state.bot and webhook_url:
-        logger.info("⚙️ Setting webhook")
-        max_retries = 3
-        retry_delay = 2
-
-        for attempt in range(max_retries):
-            try:
-                await app.state.bot.set_webhook(
-                    url=webhook_url, drop_pending_updates=True
-                )
-                logger.info("✅ Webhook configured")
-
-                # Verify webhook was set correctly
-                webhook_info = await app.state.bot.get_webhook_info()
-                if webhook_info.url == webhook_url:
-                    logger.info(f"🧪 Webhook verified: {webhook_info.url}")
-                    break
-                else:
-                    logger.warning(
-                        f"⚠️ Webhook URL mismatch. Expected: {webhook_url}, Got: {webhook_info.url}"
-                    )
-                    if attempt < max_retries - 1:
-                        logger.info(
-                            f"Retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})"
-                        )
-                        await asyncio.sleep(retry_delay)
-                    else:
-                        logger.error("Failed to verify webhook after all retries")
-            except Exception as e:
-                logger.error(
-                    f"❌ Failed to set webhook (attempt {attempt + 1}/{max_retries}): {e}"
-                )
-                if attempt < max_retries - 1:
-                    logger.info(f"Retrying in {retry_delay}s...")
-                    await asyncio.sleep(retry_delay)
-                else:
-                    logger.warning(
-                        "Webhook setup failed after all retries - bot may not receive updates"
-                    )
-                    # Don't exit - webhook can be set manually later
+        await _setup_webhook_with_backoff(app.state.bot, webhook_url)
     elif app.state.bot:
         logger.warning("No webhook URL configured - bot will not receive updates")
     else:
@@ -224,6 +266,57 @@ app.include_router(settings_router)
 app.include_router(search_router)
 app.include_router(bots_router)
 app.include_router(webhook_router)
+
+
+@app.get("/admin/webhook/info")
+async def admin_webhook_info():
+    """Current webhook status reported by Telegram (main manager bot)."""
+    if not app.state.bot:
+        return {"status": "error", "message": "Bot not initialized"}
+    try:
+        info = await app.state.bot.get_webhook_info()
+        return {
+            "configured_url": settings.webhook_url,
+            "telegram_url": info.url,
+            "pending_update_count": info.pending_update_count,
+            "last_error_date": info.last_error_date,
+            "last_error_message": info.last_error_message,
+            "allowed_updates": info.allowed_updates,
+        }
+    except Exception as exc:
+        logger.error(f"getWebhookInfo failed: {exc}")
+        return {"status": "error", "message": str(exc)}
+
+
+@app.post("/admin/webhook/refresh")
+async def admin_webhook_refresh(request: Request):
+    """Re-register the main bot's webhook using `settings.webhook_url`.
+
+    Useful when the tunnel DNS propagated late, or the tunnel URL changed
+    without a bot restart. Optional JSON body: `{"url": "https://..."}` to
+    override the configured URL for this call.
+    """
+    if not app.state.bot:
+        return {"status": "error", "message": "Bot not initialized"}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    target = body.get("url") or settings.webhook_url
+    if not target:
+        return {
+            "status": "error",
+            "message": "No webhook URL configured and none provided in body",
+        }
+    ok = await _setup_webhook_with_backoff(app.state.bot, target)
+    info = await app.state.bot.get_webhook_info()
+    return {
+        "status": "ok" if ok else "partial",
+        "requested": target,
+        "telegram_url": info.url,
+        "pending_update_count": info.pending_update_count,
+        "last_error_message": info.last_error_message,
+    }
 
 
 @app.post("/webhook/telegram")
