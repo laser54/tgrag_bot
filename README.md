@@ -10,10 +10,13 @@
 > 🚀 **One-command deploy** of a Telegram bot with RAG (Retrieval-Augmented Generation) memory. Users can upload files, index them, and ask intelligent questions powered by vector search.
 
 ## ✅ Current Status
-- **Current Runtime:** Single-bot FastAPI + aiogram webhook (`/webhook/telegram`) is running and stable.
-- **What is Implemented:** Telegram commands, Mini App integration, Qdrant runtime settings/status, document/search API stubs.
-- **What is Missing for Swarm:** Multi-bot registry, dynamic token webhooks, SQLite bot/document state, LangGraph router, strict multi-tenant retrieval.
-- **Target Direction:** Evolve into a self-hosted "Personal Bot Swarm" with one backend controlling many Telegram managed bots.
+- **Runtime:** FastAPI + aiogram (`>=3.27.0`, Bot API 9.6). Main ingress is the **dynamic** webhook `POST /webhook/telegram/{bot_token}`; legacy `POST /webhook/telegram` stays as fallback.
+- **Persistence:** Async SQLite (SQLAlchemy 2.0 + aiosqlite) at `DATABASE_URL` (default `sqlite+aiosqlite:///data/app.db`). `Bot` + `Document` models + enums (`BotType=rag|researcher|mentor`, `DocumentStatus=queued|processing|ready|failed`). `Alembic` not yet wired — tables are bootstrapped via `create_all` on startup.
+- **Multi-bot provisioning:** Admin flow uses native Bot API 9.6 (`KeyboardButtonRequestManagedBot` → `Message.managed_bot_created` → `getManagedBotToken`). Handler persists the new bot, auto-registers its per-token webhook, and offers an inline keyboard to flip `bot_type`.
+- **Routing:** `BotRegistry` (`apps/bot/tg/bot_registry.py`) lazily instantiates and caches `aiogram.Bot` sessions by token, with async-lock and graceful shutdown.
+- **Admin REST:** `GET /api/bots`, `POST /api/bots` (dev seed) expose the registry; tokens are masked in the response.
+- **What is Missing for Swarm:** Alembic migrations, `DocumentsRepository` + dual-write, LangGraph router per `bot_type`, strict multi-tenant retrieval with mandatory `bot_id` filter, per-bot webhook secret validation.
+- **Target Direction:** Self-hosted "Personal Bot Swarm" — one backend controlling many Telegram managed bots.
 
 ## ✨ Features
 
@@ -197,16 +200,43 @@ curl http://localhost:8080/status
 #### 6. API Documentation
 When running, API docs available at: `http://localhost:8080/docs`
 
-## 🔌 Runtime APIs (current stubs)
+## 🔌 Runtime APIs
+### Core
 - `GET /health` – FastAPI health probe
 - `GET /qdrant/status` – Current mode (`cloud`, `local`, `disabled`, `not_configured`), reachability, collection health, and vector counters
 - `GET/PUT /api/settings/qdrant` – Read or update Qdrant URL/API key/collection (Mini App uses this for post-install credentials)
+
+### Multi-bot swarm
+- `POST /webhook/telegram/{bot_token}` – **Dynamic** ingress. Resolves the bot via SQLite, dispatches through the shared `BotRegistry`. 404 on unknown token, 503 if dispatcher not initialised.
+- `POST /webhook/telegram` – Legacy single-bot fallback (kept during transition).
+- `GET /api/bots` – List managed bots (tokens are masked as `123456...abcd`).
+- `POST /api/bots` – Register a managed bot manually (dev/seed). Body: `{token, owner_id, name, bot_type: "rag"|"researcher"|"mentor"}`. Returns 201 or 409 on duplicate token.
+
+### Document stubs (to be replaced in Phase 5)
 - `GET /api/documents` – List uploaded documents with metadata, index flags, and chunk counts
 - `POST /api/documents` – Upload a file (metadata-only today) and queue it for future processing
 - `POST /api/documents/{id}/index` – Stub indexer; validates Qdrant availability before toggling the `indexed` flag
 - `POST /api/documents/{id}/remove-from-index` – Stub removal endpoint that flips `indexed=false` and clears chunk counters
 - `DELETE /api/documents/{id}` – Delete stored metadata (vectors will be removed once RAG is fully wired)
 - `POST /api/search` – Stub semantic search returning mocked chunks referencing uploaded docs
+
+## 👑 Admin bot UX (Phase 2)
+
+The manager bot offers a reply-keyboard button with `KeyboardButtonRequestManagedBot` (Bot API 9.6). Tapping it triggers Telegram's native UI for creating a child bot; on completion the manager bot receives a service message that is auto-persisted and webhook-registered.
+
+**Prerequisites**
+- Manager bot enabled in [@BotFather](https://t.me/botfather) → "Manage Bots" Mini App (grants permission to use `KeyboardButtonRequestManagedBot` and call `getManagedBotToken`).
+- `ALLOWED_USER_IDS` env var set to the comma-separated list of Telegram user IDs allowed to provision bots.
+- `WEBHOOK_URL` configured (public HTTPS) so the backend can derive the per-bot webhook base.
+
+**Flow**
+1. Admin sends `/start` → receives a reply keyboard with **➕ Create managed bot**.
+2. Admin taps it → Telegram walks them through name/username.
+3. Backend receives `Message.managed_bot_created`, calls `getManagedBotToken(user_id=new_bot.id)`, inserts into `bots` table, and registers `{WEBHOOK_URL_BASE}/webhook/telegram/{new_token}` via the shared `BotRegistry`.
+4. Admin sees a confirmation with an inline keyboard to pick `bot_type` (RAG / Researcher / Mentor). Default is RAG.
+5. `/listbots` shows the current registry (tokens masked).
+
+See [`apps/bot/tg/handlers/admin.py`](apps/bot/tg/handlers/admin.py) for the wiring.
 
 ## 🏗️ Architecture
 
@@ -217,13 +247,26 @@ tgrag-bot/
 │   ├── settings.py          # Pydantic configuration
 │   ├── documents/           # In-memory document store (dev stub)
 │   ├── qdrant/              # Runtime config + status helpers
-│   ├── tg/handlers.py       # Telegram bot handlers (T3)
+│   ├── db/                  # Async SQLite (SQLAlchemy 2.0) — models, engine, repositories
+│   │   ├── base.py
+│   │   ├── engine.py
+│   │   ├── models.py        # Bot, Document, BotType, DocumentStatus
+│   │   └── repositories/bots.py
+│   ├── tg/
+│   │   ├── bot_registry.py  # Token-addressed cache of aiogram.Bot instances
+│   │   └── handlers/
+│   │       ├── __init__.py  # Aggregate router (admin included before user)
+│   │       ├── common.py    # is_admin, webhook registration helper
+│   │       ├── admin.py     # Phase 2: KeyboardButtonRequestManagedBot flow
+│   │       └── user.py      # /start, /menu, catch-all (non-admin)
 │   └── routes/
 │       ├── health.py        # Health check endpoint
 │       ├── qdrant.py        # GET /qdrant/status
 │       ├── settings_api.py  # Runtime settings (Qdrant etc.)
 │       ├── documents.py     # Document CRUD + index/remove stubs
-│       └── search.py        # POST /api/search (stubbed)
+│       ├── search.py        # POST /api/search (stubbed)
+│       ├── bots.py          # GET/POST /api/bots
+│       └── webhook.py       # POST /webhook/telegram/{bot_token} (dynamic)
 ├── webapp/                  # Telegram Mini App frontend
 │   ├── index.html           # Main Mini App page
 │   ├── app.js              # Frontend logic

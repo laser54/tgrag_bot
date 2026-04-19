@@ -1,6 +1,9 @@
-"""Telegram bot handlers for webhook mode."""
+"""User-facing handlers: /start, /menu, catch-all text.
 
-import logging
+Registered AFTER `admin_router`, so admin-filtered /start wins for admins.
+"""
+
+from __future__ import annotations
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -11,29 +14,22 @@ from aiogram.types import (
     Message,
     WebAppInfo,
 )
+from loguru import logger
 
-from ..settings import settings
+from ...settings import settings
 
-# Create router
 router = Router()
-
-logger = logging.getLogger(__name__)
 
 
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
-    """Handle /start command."""
-    logger.info(f"/start from {message.from_user.id}")
-
-    welcome_text = (
+    logger.info(f"/start from {message.from_user.id if message.from_user else '?'}")
+    await message.reply(
         "🤖 Hello! I'm Telegram RAG Bot\n\n"
         "I can analyze documents and answer questions. "
         "Upload files and ask questions!\n\n"
         "Use /menu to access bot features."
     )
-
-    await message.reply(welcome_text)
-    logger.debug(f"Welcome sent to {message.from_user.id}")
 
     try:
         await message.bot.set_chat_menu_button(
@@ -49,15 +45,15 @@ async def cmd_start(message: Message) -> None:
 
 @router.message(Command("menu"))
 async def cmd_menu(message: Message) -> None:
-    """Handle /menu command with WebApp button."""
-    logger.info(f"/menu from {message.from_user.id}")
+    user_id = message.from_user.id if message.from_user else None
+    logger.info(f"/menu from {user_id}")
 
-    # Check if user is allowed (if restrictions are set)
     if (
         settings.allowed_user_ids
-        and message.from_user.id not in settings.allowed_user_ids_list
+        and user_id is not None
+        and user_id not in settings.allowed_user_ids_list
     ):
-        logger.warning(f"Access denied for user {message.from_user.id}")
+        logger.warning(f"Access denied for user {user_id}")
         await message.reply("❌ You don't have access to this bot.")
         return
 
@@ -66,19 +62,17 @@ async def cmd_menu(message: Message) -> None:
             [
                 InlineKeyboardButton(
                     text="📱 Open Application",
-                    web_app={"url": settings.webapp_url_full},
+                    web_app=WebAppInfo(url=settings.webapp_url_full),
                 )
             ]
         ]
     )
 
-    menu_text = (
+    await message.reply(
         "🎛️ Bot Menu\n\n"
-        "Click the button below to open the interface for working with documents:"
+        "Click the button below to open the interface for working with documents:",
+        reply_markup=keyboard,
     )
-
-    await message.reply(menu_text, reply_markup=keyboard)
-    logger.debug(f"Menu sent to {message.from_user.id}")
 
     try:
         await message.bot.set_chat_menu_button(
@@ -94,16 +88,13 @@ async def cmd_menu(message: Message) -> None:
 
 @router.message()
 async def handle_text(message: Message) -> None:
-    """Handle regular text messages."""
+    txt = message.text or ""
     logger.debug(
-        f"Text from {message.from_user.id}: '{message.text[:80] if message.text else ''}'"
+        f"Text from {message.from_user.id if message.from_user else '?'}: "
+        f"'{txt[:80]}'"
     )
-
-    # For now, just acknowledge the message
-    # Later this will be replaced with RAG logic
     await message.reply(
         "📝 Message received!\n\n"
         "For now I only accept messages. "
         "Soon there will be RAG logic for document analysis!"
     )
-    logger.debug(f"Ack sent to {message.from_user.id}")

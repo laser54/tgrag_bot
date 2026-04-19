@@ -38,3 +38,12 @@ class BotsRepository:
         await self._s.commit()
         await self._s.refresh(bot)
         return bot
+
+    async def set_bot_type(self, bot_id: int, bot_type: BotType) -> Bot | None:
+        bot = await self._s.get(Bot, bot_id)
+        if bot is None:
+            return None
+        bot.bot_type = bot_type
+        await self._s.commit()
+        await self._s.refresh(bot)
+        return bot
