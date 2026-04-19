@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
+from .db import init_db, shutdown_db
+from .routes.bots import router as bots_router
 from .routes.documents import router as documents_router
 from .routes.health import router as health_router
 from .routes.qdrant import router as qdrant_router
@@ -32,6 +34,13 @@ async def lifespan(app: FastAPI):
     """Application lifespan context manager."""
     # Startup
     logger.info("🚀 Starting Telegram RAG Bot")
+
+    # Initialize database (dev: create_all; Alembic migrations coming next)
+    try:
+        await init_db()
+    except Exception as exc:
+        logger.error(f"❌ Database init failed: {exc}")
+        raise
 
     # Initialize bot and dispatcher for later use
     try:
@@ -184,6 +193,8 @@ async def lifespan(app: FastAPI):
     if app.state.bot:
         await app.state.bot.session.close()
 
+    await shutdown_db()
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -208,6 +219,7 @@ app.include_router(qdrant_router)
 app.include_router(documents_router)
 app.include_router(settings_router)
 app.include_router(search_router)
+app.include_router(bots_router)
 
 
 @app.post("/webhook/telegram")

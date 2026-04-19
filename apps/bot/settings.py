@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     upload_dir: str = Field("data/uploads", env="UPLOAD_DIR")
     max_file_size_mb: int = Field(10, env="MAX_FILE_SIZE_MB")
 
+    # Database
+    database_url: str = Field("sqlite+aiosqlite:///data/app.db", env="DATABASE_URL")
+
     class Config:
         """Pydantic configuration."""
 
