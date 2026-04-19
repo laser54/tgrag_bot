@@ -19,8 +19,10 @@ from .routes.health import router as health_router
 from .routes.qdrant import router as qdrant_router
 from .routes.search import router as search_router
 from .routes.settings_api import router as settings_router
+from .routes.webhook import router as webhook_router
 from .settings import settings
 from .tg import handlers
+from .tg.bot_registry import bot_registry
 
 # Configure logging (minimal but structured)
 logging.basicConfig(level=logging.INFO)
@@ -193,6 +195,7 @@ async def lifespan(app: FastAPI):
     if app.state.bot:
         await app.state.bot.session.close()
 
+    await bot_registry.shutdown_all()
     await shutdown_db()
 
 
@@ -220,6 +223,7 @@ app.include_router(documents_router)
 app.include_router(settings_router)
 app.include_router(search_router)
 app.include_router(bots_router)
+app.include_router(webhook_router)
 
 
 @app.post("/webhook/telegram")
