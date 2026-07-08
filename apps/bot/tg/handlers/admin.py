@@ -168,7 +168,7 @@ async def on_managed_bot_created(message: Message) -> None:
     except Exception as exc:
         logger.error(f"get_managed_bot_token failed for {new_bot.id}: {exc}")
         await message.reply(
-            "❌ Could not fetch token from Telegram: " f"<code>{exc}</code>",
+            f"❌ Could not fetch token from Telegram: <code>{exc}</code>",
             parse_mode="HTML",
         )
         return
@@ -195,7 +195,7 @@ async def on_managed_bot_created(message: Message) -> None:
         f"🔗 Webhook: <code>{info}</code>" if ok else f"⚠️ Webhook not set ({info})"
     )
     logger.info(
-        f"Phase2: persisted bot_id={bot_row.id} owner={owner_id} " f"webhook_ok={ok}"
+        f"Phase2: persisted bot_id={bot_row.id} owner={owner_id} webhook_ok={ok}"
     )
 
     await message.reply(

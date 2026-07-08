@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = Field("sqlite+aiosqlite:///data/app.db", env="DATABASE_URL")
+    # Emergency fallback: create tables via Base.metadata.create_all instead of
+    # running Alembic migrations. Default off — migrations are the source of truth.
+    dev_create_all: bool = Field(False, env="DEV_CREATE_ALL")
 
     class Config:
         """Pydantic configuration."""
@@ -45,7 +48,7 @@ class Settings(BaseSettings):
         """Validate Telegram bot token format."""
         if not v or not v.strip():
             raise ValueError(
-                "TELEGRAM_BOT_TOKEN is required. " "Get it from @BotFather on Telegram."
+                "TELEGRAM_BOT_TOKEN is required. Get it from @BotFather on Telegram."
             )
         if not v.startswith(("123456:ABC-", "123456789:ABC-")):
             logging.getLogger(__name__).debug(

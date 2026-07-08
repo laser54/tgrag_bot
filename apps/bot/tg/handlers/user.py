@@ -90,8 +90,7 @@ async def cmd_menu(message: Message) -> None:
 async def handle_text(message: Message) -> None:
     txt = message.text or ""
     logger.debug(
-        f"Text from {message.from_user.id if message.from_user else '?'}: "
-        f"'{txt[:80]}'"
+        f"Text from {message.from_user.id if message.from_user else '?'}: '{txt[:80]}'"
     )
     await message.reply(
         "📝 Message received!\n\n"

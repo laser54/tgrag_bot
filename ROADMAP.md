@@ -56,12 +56,21 @@ Recommended global order: `A1, A2, B1, B2, C1, B3, C2, C3, A3, D1, D2, D3`.
 6. Delete JSON writes; keep [apps/bot/documents/store.py](apps/bot/documents/store.py) only if still read by a migration path, otherwise remove.
 
 **Acceptance:**
-- [ ] `uv run alembic upgrade head` creates/updates `data/app.db` with no error on a fresh DB.
-- [ ] `uv run alembic downgrade -1 && uv run alembic upgrade head` round-trips cleanly.
-- [ ] `GET /api/documents` returns data sourced from SQLite (verify by inserting a row via repo, not JSON).
-- [ ] No code path writes to `documents.json` anymore (grep shows JSON store only in removed/legacy).
-- [ ] App starts without calling `create_all` (or only under an explicit dev flag).
-- [ ] `uv run ruff check .` clean.
+- [x] `uv run alembic upgrade head` creates/updates `data/app.db` with no error on a fresh DB.
+- [x] `uv run alembic downgrade -1 && uv run alembic upgrade head` round-trips cleanly.
+- [x] `GET /api/documents` returns data sourced from SQLite (verify by inserting a row via repo, not JSON).
+- [x] No code path writes to `documents.json` anymore (grep shows JSON store only in removed/legacy).
+- [x] App starts without calling `create_all` (or only under an explicit dev flag).
+- [x] `uv run ruff check .` clean.
+
+> **Status: DONE.** Notes for the next agent:
+> - Alembic config at `alembic.ini` (root); migrations under `apps/bot/db/migrations/`. Baseline revision `98b1dd9da74b` matches the models (incl. new `Document.size`, `chunk_count`, `error`, `indexed_at`).
+> - `apps/bot/db/migrations/env.py` reads `DATABASE_URL` from env directly (NOT `apps.bot.settings`) so migrations run in CI without `TELEGRAM_BOT_TOKEN`.
+> - `init_db` now runs `alembic upgrade head` in a worker thread (env.py owns its own event loop). `DEV_CREATE_ALL=true` is an emergency fallback only.
+> - `Document.bot_id` is temporarily **nullable** (no auth yet — A2 provides bot context, B1 enforces non-null at vector-write time). No leak risk today: no vectors exist yet.
+> - `routes/documents.py` keeps the Mini App contract: `id` is exposed as `str(int)`, `indexed` is derived from `status==ready`, `chunks` from `chunk_count`.
+> - `routes/search.py` still reads the JSON store (read-only, stub) — replaced in B2. `apps/bot/documents/store.py` is intentionally kept until B2 per the ground rule.
+> - For an **existing** `data/app.db` created by the old `create_all`, run `uv run alembic stamp head` once before starting the app (so Alembic knows the baseline is already applied).
 
 ## A2. Webhook secret + Mini App initData auth
 

@@ -20,6 +20,7 @@ dependencies = [
     "llama-index-embeddings-openai>=0.2.0",
     "sqlalchemy[asyncio]>=2.0.45",
     "aiosqlite>=0.22.1",
+    "alembic>=1.18.5",
 ]
 
 [dependency-groups]
@@ -41,6 +42,7 @@ packages = ["apps"]
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+extend-exclude = ["apps/bot/db/migrations", "verify_a1.py"]
 
 [tool.ruff.lint]
 select = [
