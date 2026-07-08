@@ -332,6 +332,10 @@ tgrag-bot/
 
 ## 📈 Roadmap
 
+> **Next steps live in [ROADMAP.md](ROADMAP.md)** — ordered tasks with acceptance criteria
+> (RAG core, Bot API 10.1 streaming/Rich Messages, security, tests). The phase list below is
+> historical context; Phases 1-3 are done.
+
 ### Phase 0: Baseline (already in repo)
 - [x] Single webhook flow (`POST /webhook/telegram`) with aiogram v3.
 - [x] Core API surface for documents/search/settings and Qdrant health/runtime config.

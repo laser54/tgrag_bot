@@ -1,5 +1,10 @@
 # tgrag_bot Swarm Implementation Plan
 
+> ACTIVE WORK: start from [ROADMAP.md](ROADMAP.md) — it has the ordered, actionable task list
+> with binding acceptance criteria for the next agent. This file is the long-term architecture
+> reference and phase history. Phases 1-3 are done; Phases 4-6 below are superseded by the
+> pragmatic tracks in ROADMAP.md (RAG core + Bot API 10.1 UX + security/tests first).
+
 ## Mission
 Transform `tgrag_bot` from a single-bot webhook service into a self-hosted multi-bot platform ("Personal Bot Swarm") where:
 - One admin bot provisions managed Telegram bots.
